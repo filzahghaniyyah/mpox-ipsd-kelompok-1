@@ -24,6 +24,10 @@ Sumber data: [Mpox Skin Lesion Dataset v2.0 di Kaggle](https://www.kaggle.com/da
 
 ## Arsitektur dan metode
 
+![Diagram arsitektur CNN baseline, CNN modifikasi, dan Swin-Tiny dengan warna pink muda dan biru muda](assets/architecture-pink-blue.png)
+
+Diagram mengikuti urutan layer pada source proyek. Notasi ukuran CNN adalah C × H × W; notasi stage Swin adalah H × W × C. [Unduh PNG diagram](assets/architecture-pink-blue.png).
+
 | Komponen | CNN baseline | CNN modifikasi | Swin-Tiny |
 |---|---|---|---|
 | Implementasi | [CNN.py](Models/CNN.py) | [CNN_modified.py](Models/CNN_modified.py) | [SwinModel.py](Models/SwinModel.py) |
