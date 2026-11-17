@@ -1,0 +1,1 @@
+"""Arsitektur klasifikasi enam kelas."""

@@ -1,0 +1,42 @@
+# Dataset: unduh sendiri dari Kaggle, jangan masukkan ke Git.
+Original Images/
+Augmented Images/
+FOLDS/
+FOLDS_AUG/
+data/
+dataset/
+datasets/
+
+# Semua bobot/checkpoint dan arsip, di folder mana pun.
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.keras
+*.caffe
+*.caffemodel
+*.onnx
+*.ckpt
+*.safetensors
+*.pkl
+*.pickle
+*.bin
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+
+# Output eksekusi lokal; hanya hasil terpilih di results/ yang diterbitkan.
+/outputs/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+.env.*
+.ipynb_checkpoints/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
