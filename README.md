@@ -1,5 +1,6 @@
 # Klasifikasi Citra Lesi Kulit dengan CNN dan Swin Transformer
 
+## Ringkasan
 Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Proyek ini membandingkan CNN baseline dari materi, CNN dengan arsitektur yang dimodifikasi, dan Swin-Tiny untuk mengklasifikasikan enam kelas citra kulit.
 
 **Status per 17 November 2026:** hasil lima fold untuk dua CNN sudah tersedia dan diverifikasi ulang dari checkpoint lokal. Swin sedang dijalankan oleh penulis; hasilnya belum dimasukkan. Repositori ini belum menyatakan eksperimen tiga model selesai.
@@ -56,9 +57,7 @@ Semua model menghasilkan enam **logits** dan dilatih dengan `CrossEntropyLoss`. 
 
 Konfigurasi di atas adalah default kode yang dibagikan, bukan bukti bahwa semua hasil lama menggunakan kode ini. Run baru menyimpan `run_config.json` dan `history_fold*.csv`. Untuk perbandingan arsitektur yang lebih terkontrol, samakan kebijakan data dan anggaran training, lalu dokumentasikan setiap perbedaan yang masih diperlukan.
 
-## Jawaban tujuh pertanyaan LMS
-
-### 1. Bagaimana karakteristik distribusi data pada setiap kelas?
+### Karakteristik distribusi data pada setiap kelas
 
 Hitungan diperoleh langsung dari folder lokal, bukan dari perkiraan. Dalam satu fold lengkap terdapat **755 citra original** pada gabungan Train, Valid, dan Test. Tabel menggunakan fold 1 sebagai acuan; kelima fold memiliki total per kelas yang sama. Angka lima fold tidak dijumlahkan sebagai jumlah citra unik karena fold merupakan pembagian ulang koleksi yang sama.
 
@@ -85,13 +84,13 @@ Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit, dengan ras
 
 Tabel lengkap per kelas dan split tersedia di [dataset_distribution.csv](results/dataset_distribution.csv). Penjumlahan Original dan Augmented Train mengikuti ketentuan tugas; transformasi augmentasi spesifik tidak direkonstruksi karena proyek menggunakan file augmentasi yang disediakan dataset.
 
-### 2. Preprocessing apa yang digunakan dan bagaimana pengaruhnya terhadap hasil klasifikasi?
+### Preprocessing yang digunakan dan pengaruhnya terhadap hasil klasifikasi
 
 Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, membagi intensitas dengan **255**, mengubah susunan kanal menjadi **CHW**, dan mengonversinya ke tensor `float32`. Urutan warna tetap **BGR**, sesuai kode dan checkpoint awal; tidak ada konversi RGB atau normalisasi ImageNet. CNN modifikasi dan Swin kemudian memperbesar tensor dengan interpolasi bilinear di dalam `forward()`.
 
 Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensitas. Namun, detail lesi yang hilang ketika diperkecil ke 100 × 100 tidak kembali hanya dengan diperbesar ke 160 atau 224. Tidak ada eksperimen ablation dengan model dan pengaturan identik, sehingga besar pengaruh preprocessing terhadap skor belum dapat diukur secara terpisah. Peningkatan CNN modifikasi tidak boleh diklaim semata-mata akibat resize, ELU, atau dropout.
 
-### 3. Apakah model mampu mengklasifikasikan keenam kelas dengan baik?
+### Kemampuan model untuk mengklasifikasi 6 kelas
 
 **Belum secara merata.** CNN baseline memperoleh accuracy rata-rata **43,47%** dan CNN modifikasi **51,81%**. Recall per kelas menunjukkan kemampuan lebih baik pada HFMD dan Monkeypox daripada Chickenpox, Cowpox, dan Measles. Skor weighted dipengaruhi jumlah sampel kelas; karena itu confusion matrix dan recall setiap kelas juga diperiksa.
 
@@ -106,7 +105,7 @@ Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensit
 
 Recall di tabel adalah rerata lima recall per fold, bukan recall dari satu confusion matrix gabungan. Swin belum dapat dinilai sebelum pengujian lima fold selesai.
 
-### 4. Kelas apa yang paling sering mengalami kesalahan klasifikasi?
+### Kelas yang paling sering mengalami kesalahan klasifikasi
 
 Pada CNN baseline, **Chickenpox dan Measles memiliki tingkat kesalahan rata-rata 100%** (recall 0%). Chickenpox paling sering diprediksi sebagai Monkeypox, dengan proporsi rata-rata 82,22% dari Chickenpox di masing-masing fold. Measles juga paling sering menjadi Monkeypox (66,33%). Jika memakai jumlah kemunculan pada seluruh Test fold, Chickenpox memiliki 42 kesalahan dari 42 kemunculan, paling banyak pada baseline.
 
@@ -118,7 +117,7 @@ Bukti numerik: [per kelas CNN](results/initial/cnn/per_class_summary.csv), [per 
 
 ![Confusion matrix CNN modifikasi](results/initial/cnn_modified/confusion_matrix_mean.png)
 
-### 5. Bagaimana hasil evaluasi pada masing-masing fold?
+### Hasil evaluasi pada masing-masing fold
 
 | Model | Fold | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -137,7 +136,7 @@ CNN baseline memiliki accuracy tertinggi pada fold 1 (52,70%) dan terendah pada 
 
 CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv) dan [CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv). Angka tersebut berhasil direproduksi saat evaluasi ulang seluruh checkpoint dengan selisih maksimum 0.0 terhadap CSV awal. Swin masih menunggu hasil.
 
-### 6. Bagaimana hasil rata-rata evaluasi dari kelima fold?
+### Hasil rata-rata evaluasi dari kelima fold
 
 | Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
 | --- | --- | --- | --- | --- | --- |
@@ -151,7 +150,7 @@ CNN modifikasi unggul **8,34 poin persentase** pada accuracy dan **7,93 poin per
 
 ![Perbandingan hasil awal](results/model_comparison.png)
 
-### 7. Apa kelebihan dan keterbatasan model yang dikembangkan?
+### Kelebihan dan keterbatasan model yang dikembangkan
 
 | Model | Kelebihan | Keterbatasan berdasarkan eksperimen atau implementasi |
 |---|---|---|
@@ -171,7 +170,7 @@ Contoh fold 1 ditampilkan di bawah. Seluruh grafik lima fold berada pada [hasil 
 
 Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai untuk Test dipilih pada epoch 1, saat validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik seluruh fold terdapat di [verification.json](results/initial/verification.json).
 
-## Menjalankan proyek
+## Cara menjalankan
 
 1. Clone repositori, buat virtual environment, lalu instal dependensi. Versi yang diuji tercantum pada `requirements.txt` (Python lokal 3.14.4). Untuk GPU, gunakan pasangan torch/torchvision yang sesuai petunjuk resmi PyTorch.
 
