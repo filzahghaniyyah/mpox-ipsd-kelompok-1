@@ -1,18 +1,21 @@
 import torch
 import torch.nn as nn
-from torchvision.models import swin_t
+from torchvision.models import regnet_y_400mf, RegNet_Y_400MF_Weights
 
-class SwinModel(nn.Module):
-    def __init__(self, input_dim=100, input_c=3, output=6, hidden_dim=128, dropout=0.5, device='cpu'):
-        super(SwinModel, self).__init__()
 
-        self.model = swin_t(weights = None)  # Load the Swin Transformer model without pre-trained weights
-        self.model.head = nn.Linear(self.model.head.in_features, output)  # Replace the classification head with a new one for our specific output classes
+class RegNetModel(nn.Module):
+    def __init__(self, output=6):
+        super(RegNetModel, self).__init__()
+        
+        self.model = regnet_y_400mf(weights=RegNet_Y_400MF_Weights.IMAGENET1K_V2)
+        
+        self.model.fc = nn.Linear(self.model.fc.in_features, output)
 
+        
+        self.register_buffer("mean", torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1))
+        self.register_buffer("std", torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1))
 
     def forward(self, x):
-        if x.shape[-2:] != (224, 224):
-            x = torch.nn.functional.interpolate(
-                x, size=(224, 224), mode="bilinear", align_corners=False
-            )
+        x = x[:, [2, 1, 0]]
+        x = (x - self.mean) / self.std
         return self.model(x)
