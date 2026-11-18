@@ -1,54 +1,55 @@
 # Klasifikasi Citra Lesi Kulit dengan CNN dan RegNet
 
 ## Ringkasan
-Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** menggunakan [Mpox Skin Lesion Dataset v2.0 (MSLD v2.0)](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data). Proyek ini membandingkan CNN baseline dari materi, CNN dengan arsitektur yang dimodifikasi, dan RegNet untuk mengklasifikasikan enam kelas citra kulit (`Chickenpox`, `Cowpox`,`HFMD`,`Healthy`,`Measles`, dan `Monkeypox`). Dataset ini punya 755 gambar asli yang sudaah dibagi menjadi 5 fold (Train, Valid, Test). Setiap fold juga memiliki sekitar 7500 gambar augmentasi untuk training. Semua gambar kemudian di-resize menjadi 100 x 100.
 
-|Model|Arsitektur|Parameter|
-|---|---|---|
-|`cnn_baseline`|2 blok Conv-ReLU-Maxpool (20, 50, kernel 5) -> Flatten -> Linear.|Sekitar 51 rb|
-|`cnn_modified`|3 blook Conv-BatchNorm-ELU-MaxPool (32-64-128, kernel 3) -> Global Avg Pool -> Dropout 0.4 -> Linear 128 -> ELU -> Dropout 0.3 -> Linear.|Sekitar 111rb|
-|`regnet_y_400mf`|RegNetY-400MF [1] pretrained ImageNet, layer terakhir diganti 6 kelas.|Sekitar 3,9jt|
+Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** ini membandingkan CNN baseline dari materi, CNN modifikasi, dan RegNetY-400MF untuk membedakan enam kelas citra kulit. Dataset MSLD v2.0 berisi 755 citra asli. Setiap fold memakai pembagian Train, Valid, dan Test bawaan serta menyediakan 7.126–7.532 citra augmentasi untuk pelatihan. [Dataset MSLD v2.0](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data)
 
-**Status per 17 November 2026:** hasil lima fold untuk dua CNN sudah tersedia dan diverifikasi ulang dari checkpoint lokal. Swin sedang dijalankan oleh penulis; hasilnya belum dimasukkan. Repositori ini belum menyatakan eksperimen tiga model selesai.
+| Model | Arsitektur | Parameter |
+| --- | --- | ---: |
+| CNN baseline | Dua blok Conv–ReLU–MaxPool, dengan 20 dan 50 filter ukuran 5 × 5, diikuti Flatten dan Linear. | 50.876 |
+| CNN modifikasi | Tiga blok Conv–BatchNorm–ELU–MaxPool (32, 64, 128 filter ukuran 3 × 3), global average pooling, dan dua layer Linear dengan ELU dan dropout. | 110.758 |
+| RegNetY-400MF | Backbone RegNetY pretrained ImageNet dengan layer klasifikasi akhir untuk enam kelas. | Sekitar 3,9 juta |
 
-**Catatan hasil awal:** kode yang menyertai eksperimen CNN modifikasi menggunakan Augmented Train saja. Versi training di repositori ini telah diperbaiki menjadi Original Train + Augmented Train sesuai tugas. Angka pada `results/initial/` tetap merupakan hasil lama, bukan hasil pelatihan ulang kode yang diperbaiki. Lihat [riwayat dan batas interpretasi](docs/experiment_history.md).
+**Hasil lima fold tersedia untuk ketiga model.** Tabel merangkum evaluasi pada Original Test masing-masing fold. RegNetY-400MF memperoleh akurasi tertinggi pada kelima fold.
 
 | Model | Accuracy | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- |
-| CNN baseline | 43,47 ± 9,72% | 36,37 ± 8,08% | 0,7408 ± 0,0384 |
+| --- | ---: | ---: | ---: |
+| CNN baseline | 49,37 ± 3,35% | 43,19 ± 4,26% | 0,7432 ± 0,0474 |
 | CNN modifikasi | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
-| **RegNetY-400MF** | **75,85 ± 5,80%** | **75,11 ± 5,90%** | **0,9335 ± 0,0110** |
+| RegNetY-400MF | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
+
+Angka CNN modifikasi berasal dari eksperimen yang memakai **Augmented Train saja**. Skrip pelatihan saat ini sudah menggabungkan **Original Train + Augmented Train**. [Riwayat eksperimen](docs/experiment_history.md) · [Cara menjalankan kode](GUIDE.md)
 
 ## Tujuan dan alasan pemilihan model
 
-Tujuan eksperimen adalah menilai kemampuan model membedakan Chickenpox, Cowpox, HFMD, Healthy, Measles, dan Monkeypox pada dataset yang ditentukan. CNN baseline menjadi pembanding terhadap implementasi materi. CNN modifikasi menguji kombinasi tiga blok konvolusi, BatchNorm, ELU, pooling global, dan dropout. RegNetY-400MF memberi pembanding berbasis transfer learning: backbone RegNet yang efisien (± 0,4 GFLOPs) dengan bobot pretrained ImageNet, dan layer klasifikasi terakhir diganti menjadi enam kelas. Model ini dipilih karena bobot pretrained membantu dataset yang relatif kecil (755 citra original).
+Tujuan eksperimen adalah menilai kemampuan model membedakan Chickenpox, Cowpox, HFMD, Healthy, Measles, dan Monkeypox pada dataset yang ditentukan. CNN baseline menjadi pembanding terhadap implementasi materi. CNN modifikasi menguji kombinasi tiga blok konvolusi, BatchNorm, ELU, pooling global, dan dropout. RegNetY-400MF memberi pembanding berbasis transfer learning dengan backbone RegNet dan bobot pretrained ImageNet, dan layer klasifikasi terakhir diganti menjadi enam kelas. Model ini dipilih untuk menguji manfaat bobot pretrained pada dataset yang relatif kecil (755 citra original).
 
 Perbandingan ini menilai konfigurasi eksperimen secara keseluruhan. Perbedaan hasil tidak dapat langsung dianggap sebagai pengaruh satu perubahan arsitektur karena ukuran input, batch size, lama training, strategi optimasi, dan inisialisasi bobot (RegNet pretrained, kedua CNN dilatih dari nol) juga berbeda.
 
 ## Dataset dan aturan pembagian
 
-Sumber data: [Mpox Skin Lesion Dataset v2.0 di Kaggle](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data).
+Data berasal dari [Mpox Skin Lesion Dataset v2.0 di Kaggle](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data).
 
-- Training menggunakan **Original Train + Augmented Train pada fold yang sama**.
+- Ketiga skrip training saat ini menggunakan **Original Train + Augmented Train pada fold yang sama**. Angka CNN modifikasi di bawah berasal dari eksperimen awal dengan Augmented Train saja.
 - Validasi menggunakan **Original Valid** untuk memilih checkpoint dengan validation loss terendah.
 - Pengujian menggunakan **Original Test** dari fold yang sesuai, setelah pemilihan checkpoint.
-- Model dan optimizer diinisialisasi ulang untuk masing-masing dari lima fold. Split bawaan dataset dipertahankan; tidak membuat pembagian acak baru.
+- Model dan optimizer diinisialisasi ulang untuk masing-masing dari lima fold. Setiap eksperimen memakai split bawaan dataset.
 - Dataset, arsip dataset, dan bobot model tidak diunggah ke repositori.
 
 ### Karakteristik distribusi data pada setiap kelas
 
-Hitungan diperoleh langsung dari folder lokal, bukan dari perkiraan. Dalam satu fold lengkap terdapat **755 citra original** pada gabungan Train, Valid, dan Test. Tabel menggunakan fold 1 sebagai acuan; kelima fold memiliki total per kelas yang sama. Angka lima fold tidak dijumlahkan sebagai jumlah citra unik karena fold merupakan pembagian ulang koleksi yang sama.
+Hitungan diperoleh langsung dari folder lokal, bukan dari perkiraan. Dalam satu fold lengkap terdapat **755 citra original** pada gabungan Train, Valid, dan Test. Tabel menggunakan fold 1 sebagai acuan. Kelima fold memiliki total per kelas yang sama. Angka lima fold tidak dijumlahkan sebagai jumlah citra unik karena fold merupakan pembagian ulang koleksi yang sama.
 
 | Kelas | Citra original dalam satu fold lengkap | Proporsi |
 | --- | --- | --- |
-| Chickenpox | 75 | 9.93% |
-| Cowpox | 66 | 8.74% |
-| HFMD | 161 | 21.32% |
-| Healthy | 114 | 15.10% |
-| Measles | 55 | 7.28% |
-| Monkeypox | 284 | 37.62% |
+| Chickenpox | 75 | 9,93% |
+| Cowpox | 66 | 8,74% |
+| HFMD | 161 | 21,32% |
+| Healthy | 114 | 15,10% |
+| Measles | 55 | 7,28% |
+| Monkeypox | 284 | 37,62% |
 
-Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit. Datanya tidak seimbang, jumlah file Augmented Train pada setiap kelas adalah 14 kali jumlah Original Train, sehingga distribusi proporsi kelas tetap tidak seimbang. Jumlah file juga bukan merupakan jumlah pasien.
+Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit. Datanya tidak seimbang. Jumlah file Augmented Train pada setiap kelas adalah 14 kali jumlah Original Train, sehingga distribusi proporsi kelas tetap tidak seimbang. Jumlah file juga bukan merupakan jumlah pasien.
 
 ![Distribusi kelas](results/class_distribution.png)
 
@@ -60,11 +61,11 @@ Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit. Datanya ti
 | 4 | 524 | 7336 | 7860 | 150 | 81 |
 | 5 | 538 | 7532 | 8070 | 154 | 63 |
 
-Tabel lengkap per kelas dan split tersedia di [dataset_distribution.csv](results/dataset_distribution.csv). Penjumlahan Original dan Augmented Train mengikuti ketentuan tugas; transformasi augmentasi spesifik tidak direkonstruksi karena proyek menggunakan file augmentasi yang disediakan dataset.
+Tabel lengkap per kelas dan split tersedia di [dataset_distribution.csv](results/dataset_distribution.csv). Penjumlahan Original dan Augmented Train mengikuti ketentuan tugas. Proyek menggunakan file augmentasi yang disediakan dataset.
 
 ### Preprocessing yang digunakan dan pengaruhnya terhadap hasil klasifikasi
 
-Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, membagi intensitas dengan **255**, mengubah susunan kanal menjadi **CHW**, dan mengonversinya ke tensor `float32`. Di tingkat loader, urutan warna tetap **BGR** dan tidak ada normalisasi ImageNet. Penyesuaian tambahan dilakukan di dalam `forward()` masing-masing model:
+Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, membagi intensitas dengan **255**, mengubah susunan kanal menjadi **CHW**, dan mengonversinya ke tensor `float32`. Di tingkat loader, urutan warna tetap **BGR** dan tidak ada normalisasi ImageNet. Setiap model menerapkan penyesuaian berikut di dalam `forward()`. [Kode loader](Utils/getData.py)
 
 - **CNN baseline** menerima input 100 × 100 apa adanya.
 - **CNN modifikasi** memperbesar tensor menjadi **160 × 160** dengan interpolasi bilinear.
@@ -72,87 +73,44 @@ Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, mem
 
 Augmentasi tidak dibuat ulang di kode. Proyek memakai file **Augmented Images** bawaan dataset (± 14 kali jumlah Original Train per kelas) yang hanya digabungkan ke data training. Valid dan Test tetap memakai citra original.
 
-Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensitas, sehingga training lebih stabil. Normalisasi ImageNet pada RegNet membuat distribusi input sesuai dengan data saat bobot pretrained dilatih. Augmentasi menambah variasi data training (± 7.500 citra per fold), tetapi proporsi kelas tetap tidak seimbang karena setiap kelas diperbanyak dengan faktor yang sama. Detail lesi yang hilang ketika diperkecil ke 100 × 100 juga tidak kembali hanya dengan diperbesar ke 160 × 160, dan 100 × 100 jauh lebih kecil dari ukuran pretraining RegNet (224 × 224).
+Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensitas, agar intensitas input berada pada rentang yang konsisten. Normalisasi ImageNet pada RegNet membuat distribusi input sesuai dengan data saat bobot pretrained dilatih. Augmentasi menambah variasi data training (7.126–7.532 file Augmented Train per fold), tetapi proporsi kelas tetap tidak seimbang karena setiap kelas diperbanyak dengan faktor yang sama. Detail lesi yang hilang ketika diperkecil ke 100 × 100 juga tidak kembali hanya dengan diperbesar ke 160 × 160, dan 100 × 100 jauh lebih kecil dari ukuran pretraining RegNet (224 × 224).
 
 Tidak ada eksperimen ablation dengan model dan pengaturan identik, sehingga besar pengaruh setiap tahap preprocessing terhadap skor belum dapat diukur secara terpisah. Peningkatan CNN modifikasi tidak boleh diklaim semata-mata akibat resize, ELU, atau dropout, dan keunggulan RegNet tidak boleh diklaim semata-mata akibat normalisasi ImageNet.
 
 ### Kemampuan model untuk mengklasifikasi 6 kelas
 
-**Belum secara merata.** CNN baseline memperoleh accuracy rata-rata **43,47%**, CNN modifikasi **51,81%**, dan RegNetY-400MF **75,85%**. Ketiga model lebih mampu mengenali HFMD dan Monkeypox daripada Chickenpox, Cowpox, dan Measles. Skor weighted dipengaruhi jumlah sampel kelas; karena itu confusion matrix dan recall setiap kelas juga diperiksa.
+RegNetY-400MF mengenali keenam kelas dengan recall rata-rata sekitar 48–92%. Recall tertingginya terdapat pada **HFMD (92%)** dan **Healthy (90%)**. Kedua CNN lebih sering mengenali Monkeypox, tetapi masih kesulitan mengenali Chickenpox dan Measles.
 
-RegNetY-400MF adalah satu-satunya model yang mengenali keenam kelas dengan recall di atas 45%. Model ini sangat baik pada HFMD (92%) dan Healthy (90%), tetapi Chickenpox (48%) dan Cowpox (56%) masih sering tertukar dengan Monkeypox. Kedua CNN praktis gagal pada kelas minoritas: recall Chickenpox dan Measles di bawah 10%.
+| Kelas | CNN baseline | CNN modifikasi | RegNetY-400MF (≈) |
+| --- | ---: | ---: | ---: |
+| Chickenpox | 11,43% | 2,22% | 48% |
+| Cowpox | 35,22% | 2,86% | 56% |
+| HFMD | 52,75% | 73,08% | 92% |
+| Healthy | 34,24% | 37,29% | 90% |
+| Measles | 5,00% | 8,00% | 66% |
+| Monkeypox | 81,20% | 84,88% | 79% |
 
-| Kelas | Recall rata-rata CNN | Recall rata-rata CNN modifikasi | Recall rata-rata RegNetY-400MF |
-| --- | --- | --- | --- |
-| Chickenpox | 0.00% | 2.22% | 48% |
-| Cowpox | 26.43% | 2.86% | 56% |
-| HFMD | 51.08% | 73.08% | 92% |
-| Healthy | 39.27% | 37.29% | 90% |
-| Measles | 0.00% | 8.00% | 66% |
-| Monkeypox | 70.61% | 84.88% | 79% |
-
-Recall di tabel adalah rerata lima recall per fold, bukan recall dari satu confusion matrix gabungan. Recall RegNetY-400MF dibaca dari diagonal confusion matrix rerata lima fold ([confusion_matrix_mean.png](results/initial/regnet/confusion_matrix_mean.png)), sehingga hanya tersedia dalam dua desimal.
+Setiap angka adalah rata-rata recall kelas pada lima fold. Untuk CNN baseline, jumlah prediksi benar per kelas diperoleh dari diagonal matriks tiap fold dan jumlah citra Test kelas tersebut. CNN modifikasi menyediakan CSV per kelas. Untuk RegNet, nilai perkiraan mengikuti diagonal matriks rata-rata yang ditampilkan hingga dua desimal. [Matriks per fold CNN baseline](results/initial/cnn) · [Jumlah citra Test](results/dataset_distribution.csv) · [CSV per kelas CNN modifikasi](results/initial/cnn_modified/per_class_summary.csv) · [Matriks RegNet](results/initial/regnet/confusion_matrix_mean.png)
 
 ### Kelas yang paling sering mengalami kesalahan klasifikasi
 
-Pada CNN baseline, **Chickenpox dan Measles memiliki tingkat kesalahan rata-rata 100%** (recall 0%). Chickenpox paling sering diprediksi sebagai Monkeypox, dengan proporsi rata-rata 82,22% dari Chickenpox di masing-masing fold. Measles juga paling sering menjadi Monkeypox (66,33%). Jika memakai jumlah kemunculan pada seluruh Test fold, Chickenpox memiliki 42 kesalahan dari 42 kemunculan, paling banyak pada baseline.
+- **CNN baseline.** Measles memiliki tingkat kesalahan rata-rata tertinggi (**95,00%**), disusul Chickenpox (**88,57%**). Sekitar 47% citra Measles dan 75% citra Chickenpox diprediksi sebagai Monkeypox jika proporsi tiap fold dirata-ratakan. Jika dihitung berdasarkan jumlah kemunculan di seluruh Test fold, HFMD menyumbang kesalahan terbanyak (**39 dari 82**), diikuti Chickenpox (**38 dari 42**).
+- **CNN modifikasi.** Tingkat kesalahan tertinggi terdapat pada Chickenpox (**97,78%**), Cowpox (**97,14%**), dan Measles (**92,00%**). Chickenpox salah pada 41 dari 42 kemunculan Test. Rata-rata 78,43% Chickenpox dan 66,10% Cowpox diprediksi sebagai Monkeypox.
+- **RegNetY-400MF.** Chickenpox paling sulit dikenali dengan tingkat kesalahan sekitar **52%**, diikuti Cowpox sekitar **44%**. Untuk masing-masing kelas tersebut, sekitar sepertiga citra diprediksi sebagai Monkeypox.
 
-Pada CNN modifikasi, tingkat kesalahan rata-rata tertinggi adalah **Chickenpox 97,78%**, diikuti **Cowpox 97,14%** dan **Measles 92,00%**. Chickenpox paling sering menjadi Monkeypox (78,43%); Cowpox juga paling sering menjadi Monkeypox (66,10%). Chickenpox salah pada 41 dari 42 kemunculan Test. Kemunculan antar fold tidak diperlakukan sebagai pasien atau citra unik.
-
-Bukti numerik: [per kelas CNN](results/initial/cnn/per_class_summary.csv), [per kelas CNN modifikasi](results/initial/cnn_modified/per_class_summary.csv), serta `confusion_counts_fold*.csv` di folder model masing-masing.
-
-![Confusion matrix CNN](results/initial/cnn/confusion_matrix_mean.png)
-
-![Confusion matrix CNN modifikasi](results/initial/cnn_modified/confusion_matrix_mean.png)
+| CNN baseline | CNN modifikasi | RegNetY-400MF |
+| --- | --- | --- |
+| ![Confusion matrix rata-rata CNN baseline](results/initial/cnn/confusion_matrix_mean.png) | ![Confusion matrix rata-rata CNN modifikasi](results/initial/cnn_modified/confusion_matrix_mean.png) | ![Confusion matrix rata-rata RegNet](results/initial/regnet/confusion_matrix_mean.png) |
 
 ### Hasil evaluasi pada masing-masing fold
 
 | Model | Fold | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- | --- | --- | --- |
-| CNN baseline | 1 | 52.70% | 41.00% | 52.70% | 43.32% | 0.7791 |
-| CNN baseline | 2 | 46.34% | 36.47% | 46.34% | 39.10% | 0.7105 |
-| CNN baseline | 3 | 46.88% | 39.43% | 46.88% | 41.04% | 0.6952 |
-| CNN baseline | 4 | 44.44% | 32.94% | 44.44% | 35.56% | 0.7788 |
-| CNN baseline | 5 | 26.98% | 28.02% | 26.98% | 22.85% | 0.7406 |
-| CNN modifikasi | 1 | 44.59% | 26.60% | 44.59% | 33.32% | 0.7394 |
-| CNN modifikasi | 2 | 56.10% | 44.74% | 56.10% | 49.43% | 0.7819 |
-| CNN modifikasi | 3 | 57.81% | 51.90% | 57.81% | 53.46% | 0.7359 |
-| CNN modifikasi | 4 | 48.15% | 46.37% | 48.15% | 41.32% | 0.7339 |
-| CNN modifikasi | 5 | 52.38% | 47.84% | 52.38% | 43.98% | 0.8124 |
-| RegNetY-400MF | 1 | 74.32% | 76.72% | 74.32% | 73.55% | 0.9234 |
-| RegNetY-400MF | 2 | 69.51% | 68.82% | 69.51% | 68.68% | 0.9207 |
-| RegNetY-400MF | 3 | 81.25% | 81.95% | 81.25% | 80.82% | 0.9374 |
-| RegNetY-400MF | 4 | 71.60% | 72.47% | 71.60% | 70.74% | 0.9396 |
-| RegNetY-400MF | 5 | 82.54% | 84.87% | 82.54% | 81.74% | 0.9464 |
-
-CNN baseline memiliki accuracy tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3 (57,81%) dan terendah pada fold 1 (44,59%). RegNetY-400MF tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%), dan tetap unggul dari kedua CNN di setiap fold. Selisih fold tertinggi dan terendah mencapai 25,72 poin pada CNN baseline, 13,22 poin pada CNN modifikasi, dan 13,03 poin pada RegNet. Variasi ini menandakan performa sensitif terhadap pembagian data. Ukuran Test bervariasi dari 63 sampai 82 gambar per fold.
-
-CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv), [CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv), dan [RegNetY-400MF](results/initial/regnet/metrics_5fold.csv). Angka kedua CNN berhasil direproduksi saat evaluasi ulang seluruh checkpoint, dengan selisih maksimum 0.0 terhadap CSV awal. Hasil RegNetY-400MF berasal dari CSV hasil training dan belum dievaluasi ulang dengan cara yang sama.
-
-### Hasil rata-rata evaluasi dari kelima fold
-
-#### Rata-rata lima fold
-
-| Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- | --- | --- |
-| CNN baseline | 43,47 ± 9,72% | 35,57 ± 5,22% | 43,47 ± 9,72% | 36,37 ± 8,08% | 0,7408 ± 0,0384 |
-| CNN modifikasi | 51,81 ± 5,48% | 43,49 ± 9,81% | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
-| RegNetY-400MF | 75,85 ± 5,80% | 76,97 ± 6,60% | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
-
-Nilai ditampilkan sebagai **mean ± standar deviasi sampel** (`ddof=1`) dari lima fold. RegNet unggul **24,04 poin
-persentase** pada accuracy dan **30,81 poin persentase** pada F1 weighted dari CNN modifikasi. Keunggulan ini tidak
-dapat dikaitkan hanya pada arsitektur, karena RegNet juga memakai bobot pretrained ImageNet sedangkan kedua CNN dilatih
-dari nol.
-
-#### Hasil per fold
-
-| Model | Fold | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- | --- | --- | --- |
-| CNN baseline | 1 | 52,70% | 41,00% | 52,70% | 43,32% | 0,7791 |
-| CNN baseline | 2 | 46,34% | 36,47% | 46,34% | 39,10% | 0,7105 |
-| CNN baseline | 3 | 46,88% | 39,43% | 46,88% | 41,04% | 0,6952 |
-| CNN baseline | 4 | 44,44% | 32,94% | 44,44% | 35,56% | 0,7788 |
-| CNN baseline | 5 | 26,98% | 28,02% | 26,98% | 22,85% | 0,7406 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CNN baseline | 1 | 51,35% | 42,32% | 51,35% | 42,45% | 0,7606 |
+| CNN baseline | 2 | 50,00% | 40,71% | 50,00% | 41,62% | 0,6790 |
+| CNN baseline | 3 | 43,75% | 38,15% | 43,75% | 38,49% | 0,7082 |
+| CNN baseline | 4 | 49,38% | 48,43% | 49,38% | 43,33% | 0,7843 |
+| CNN baseline | 5 | 52,38% | 49,34% | 52,38% | 50,07% | 0,7838 |
 | CNN modifikasi | 1 | 44,59% | 26,60% | 44,59% | 33,32% | 0,7394 |
 | CNN modifikasi | 2 | 56,10% | 44,74% | 56,10% | 49,43% | 0,7819 |
 | CNN modifikasi | 3 | 57,81% | 51,90% | 57,81% | 53,46% | 0,7359 |
@@ -164,25 +122,31 @@ dari nol.
 | RegNetY-400MF | 4 | 71,60% | 72,47% | 71,60% | 70,74% | 0,9396 |
 | RegNetY-400MF | 5 | 82,54% | 84,87% | 82,54% | 81,74% | 0,9464 |
 
-CNN baseline tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3
-(57,81%) dan terendah pada fold 1 (44,59%). RegNet tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%).
-Ukuran Test hanya 63 sampai 82 gambar per fold, sehingga skor cukup sensitif terhadap pembagian data.
+CNN baseline memperoleh akurasi tertinggi pada **fold 5 (52,38%)** dan terendah pada **fold 3 (43,75%)**. CNN modifikasi tertinggi pada fold 3 (57,81%) dan terendah pada fold 1 (44,59%). RegNetY-400MF tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%). Setiap fold menguji 63–82 citra.
 
-CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv),
-[CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv), dan
-[RegNet](results/regnet/metrics_5fold.csv).
+Ketiga CSV mencatat hasil evaluasi Original Test. Skrip `Test (RegNet).py` menulis CSV RegNet setelah memuat checkpoint setiap fold. [CSV CNN baseline](results/initial/cnn/metrics_5fold.csv) · [CSV CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv) · [CSV RegNet](results/initial/regnet/metrics_5fold.csv) · [Kode evaluasi RegNet](Test%20%28RegNet%29.py)
+
+### Hasil rata-rata evaluasi dari kelima fold
+
+| Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CNN baseline | 49,37 ± 3,35% | 43,79 ± 4,89% | 49,37 ± 3,35% | 43,19 ± 4,26% | 0,7432 ± 0,0474 |
+| CNN modifikasi | 51,81 ± 5,48% | 43,49 ± 9,81% | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
+| RegNetY-400MF | 75,85 ± 5,80% | 76,97 ± 6,60% | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
+
+Nilai ditampilkan sebagai **rata-rata ± simpangan baku sampel** (`ddof=1`) dari lima fold. Setiap fold mendapat bobot yang sama. Berdasarkan angka CSV sebelum pembulatan, RegNet mengungguli CNN modifikasi sebesar **24,04 poin persentase** pada akurasi dan **30,80 poin persentase** pada F1 weighted.
+
+![Rata-rata dan simpangan baku lima fold untuk CNN baseline, CNN modifikasi, dan RegNetY-400MF](results/model_comparison.png)
 
 ### Kelebihan dan keterbatasan model yang dikembangkan
 
 | Model | Kelebihan | Keterbatasan |
 | --- | --- | --- |
-| CNN baseline | Arsitektur sederhana, hanya 50.876 parameter, menjadi acuan materi | Recall Chickenpox dan Measles 0%; training loss menurun ketika validation loss meningkat |
-| CNN modifikasi | Accuracy dan F1 lebih tinggi dari baseline; BatchNorm, ELU, dropout, dan pooling global sudah diterapkan | Recall kelas minoritas tetap rendah; hasil awal belum berasal dari training Original + Augmented yang diperbaiki; beberapa komponen diubah sekaligus |
-| RegNetY-400MF | Hasil terbaik pada semua metrik; bobot pretrained ImageNet membantu dataset kecil; arsitektur efisien (± 0,4 GFLOPs) | ± 3,9 juta parameter, jauh lebih berat dari dua CNN; input 100 × 100 jauh lebih kecil dari ukuran pretraining 224 × 224; perbandingan dengan CNN tidak setara karena inisialisasi berbeda |
+| CNN baseline | Arsitektur dari materi sederhana dan hanya memiliki 50.876 parameter. | Recall Measles 5,00% dan Chickenpox 11,43%. Pada fold 1, training loss turun saat validation loss cenderung naik. |
+| CNN modifikasi | Akurasi dan F1 weighted rata-rata lebih tinggi daripada baseline dengan tambahan BatchNorm, ELU, dropout, dan pooling global. | Recall Chickenpox dan Cowpox di bawah 3%. Hasil yang tersedia berasal dari training dengan Augmented Train saja. |
+| RegNetY-400MF | Memperoleh rata-rata tertinggi pada kelima metrik dan mengenali semua kelas. | Memiliki sekitar 3,9 juta parameter. Recall Chickenpox sekitar 48%. Perbedaan inisialisasi ImageNet dan pelatihan dari nol pada kedua CNN membatasi kesimpulan tentang pengaruh arsitektur. |
 
-Keterbatasan bersama meliputi ketidakseimbangan kelas, ukuran Test kecil, tidak adanya evaluasi pada dataset
-eksternal, dan belum adanya analisis per pasien. Eksperimen ini mengevaluasi klasifikasi gambar untuk tugas perkuliahan
-dan belum memvalidasi kemampuan diagnosis klinis.
+Ketidakseimbangan kelas dan ukuran Test per fold membatasi interpretasi skor. Pengujian menggunakan dataset MSLD v2.0 pada tingkat citra. Evaluasi per pasien dan validasi klinis pada dataset eksternal berada di luar eksperimen ini.
 
 ## Grafik training
 
@@ -190,22 +154,21 @@ dan belum memvalidasi kemampuan diagnosis klinis.
 | --- | --- | --- |
 | ![Training CNN fold 1](results/initial/cnn/training_fold1.png) | ![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png) | ![Training RegNet fold 1](results/initial/regnet/training_fold1.png) |
 
-Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai untuk Test dipilih pada epoch 1, saat
-validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik kedua CNN terdapat di
-[verification.json](results/initial/verification.json).
+Grafik baseline fold 1 memperlihatkan training loss mendekati nol sementara validation loss cenderung meningkat. Catatan verifikasi 17 November mencatat checkpoint epoch 3 untuk CNN modifikasi fold 1. Pemeriksaan checkpoint baseline dalam catatan itu berlaku untuk hasil sebelum CSV baseline diperbarui. [Riwayat dan cakupan verifikasi](docs/experiment_history.md)
 
 ## Struktur repositori
 
 ```text
-Models/                Arsitektur tiga model
-Utils/                 Loader, opsi eksekusi, dan ekspor per kelas
-Train (*.py)           Training terpisah untuk setiap model
-Test (*.py)            Evaluasi lima fold untuk setiap model
-scripts/               Pengumpulan hasil dan pemeriksaan isi repositori
-results/initial/       Grafik/CSV eksperimen awal dua CNN
-results/               Distribusi dataset dan grafik perbandingan
-docs/                  Riwayat eksperimen dan langkah melengkapi hasil
-requirements.txt       Versi dependensi yang digunakan saat verifikasi
+Models/                 Arsitektur CNN baseline, CNN modifikasi, dan RegNet
+Utils/                  Loader citra, konfigurasi, dan fungsi evaluasi
+Train (*.py)            Pelatihan lima fold per model
+Test (*.py)             Evaluasi Original Test per model
+results/initial/        CSV dan grafik pada subfolder cnn, cnn_modified, dan regnet
+results/                Distribusi dataset dan grafik perbandingan tiga model
+scripts/                Pengumpulan dan pemeriksaan file hasil
+docs/                   Riwayat verifikasi dan petunjuk untuk eksperimen lanjutan
+GUIDE.md                Cara menjalankan pelatihan dan pengujian
+requirements.txt        Dependensi Python
 ```
 
 ## Sumber dan atribusi

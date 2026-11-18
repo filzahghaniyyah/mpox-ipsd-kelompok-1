@@ -26,24 +26,24 @@ DATA_ROOT/
 3. Jalankan training lalu testing. Semua perintah berjalan dari root repositori.
 
 ```powershell
-# CNN baseline dan CNN modifikasi: --data-root menunjuk ke DATA_ROOT, --device cpu adalah default
-.\.venv\Scripts\python.exe "Train (CNN).py" --data-root "D:\data\msld"
-.\.venv\Scripts\python.exe "Test (CNN).py" --data-root "D:\data\msld"
-
-.\.venv\Scripts\python.exe "Train (CNN modified).py" --data-root "D:\data\msld"
-.\.venv\Scripts\python.exe "Test (CNN modified).py" --data-root "D:\data\msld"
-
-# RegNet: folder dataset diletakkan langsung di root repositori (DATA_ROOT = root repositori)
+# CNN baseline dan RegNet membaca dataset dari root repositori.
+.\.venv\Scripts\python.exe "Train (CNN).py"
+.\.venv\Scripts\python.exe "Test (CNN).py"
 .\.venv\Scripts\python.exe "Train (RegNet).py"
 .\.venv\Scripts\python.exe "Test (RegNet).py"
+
+# CNN modifikasi juga menerima lokasi dataset melalui --data-root.
+.\.venv\Scripts\python.exe "Train (CNN modified).py" --data-root "D:\data\msld"
+.\.venv\Scripts\python.exe "Test (CNN modified).py" --data-root "D:\data\msld"
 ```
 
-Untuk CNN, `--epochs`, `--batch-size`, `--learning-rate`, `--seed`, `--output-root`, dan `--checkpoint-root` dapat
-diatur dari command line. Script RegNet memakai pengaturan tetap di dalam file dan otomatis memakai GPU lewat
-`torch-directml` bila paket itu terpasang; jika tidak, berjalan di CPU.
+CNN baseline dan RegNet mencari `Original Images` dan `Augmented Images` di sebelah skrip. CNN baseline berjalan di CPU. RegNet memakai DirectML jika `torch-directml` tersedia dan memakai CPU pada instalasi standar. Untuk CNN modifikasi, `--data-root`, `--device`, `--batch-size` dan `--output-root` berlaku saat training maupun testing. `--epochs`, `--learning-rate` dan `--seed` berlaku saat training, sedangkan `--checkpoint-root` berlaku saat testing.
 
-Checkpoint terbaik dan output baru disimpan lokal di `outputs/model 1 (CNN)`, `outputs/model 2 (CNN modified)`, dan
-`outputs/model 3 (RegNet)`. Folder ini diabaikan Git.
+| Model | Lokasi checkpoint, metrik, dan grafik yang baru dibuat |
+| --- | --- |
+| CNN baseline | Root repositori, di sebelah `Train (CNN).py` |
+| CNN modifikasi | `outputs/model 2 (CNN modified)/` secara default |
+| RegNetY-400MF | `outputs/model 3 (RegNet)/` |
 
 ## Struktur
 
@@ -61,11 +61,9 @@ Train (CNN modified).py     training 5 fold CNN modifikasi
 Train (RegNet).py           training 5 fold RegNet
 Test (*.py)                 evaluasi 5 fold: metrik, confusion matrix
 scripts/                    pengumpulan hasil dan pemeriksaan isi repositori
-results/initial/            grafik/CSV eksperimen awal dua CNN
-results/regnet/             grafik/CSV hasil RegNet
-results/                    distribusi dataset dan grafik perbandingan
-docs/                       riwayat eksperimen dan langkah melengkapi hasil
-assets/                     banner dan diagram arsitektur
+results/initial/            grafik dan CSV pada subfolder cnn, cnn_modified, dan regnet
+results/                    distribusi dataset dan grafik perbandingan tiga model
+docs/                       riwayat verifikasi dan petunjuk untuk eksperimen lanjutan
 ```
 
 ## Alur Kerja
@@ -99,7 +97,7 @@ flowchart TD
         AGG["Rata-rata 5 fold<br/>confusion matrix rata-rata"]
     end
 
-    OUT["outputs/model k/<br/>checkpoint, training_foldk.png<br/>confusion_matrix_*.png, metrics_5fold.csv"]
+    OUT["Folder keluaran tiap model<br/>checkpoint, grafik training, confusion matrix<br/>dan metrics_5fold.csv"]
 
     START --> LOAD --> FOLD --> SEED --> DS --> BUILD --> TRAIN --> SAVE --> NEXT
     NEXT -->|"ya"| SEED
@@ -201,9 +199,6 @@ flowchart LR
     class R4 changed
 ```
 
-Diagram detail per layer: [architecture-pink-blue.png](assets/architecture-pink-blue.png). Diagram tersebut masih
-menggambarkan Swin-Tiny sebagai model 3 dan perlu diperbarui ke RegNet.
-
 ## Metode
 
 - **Pembagian data:** memakai 5 fold bawaan dataset. Training memakai **Original Train + Augmented Train** pada fold
@@ -216,9 +211,11 @@ menggambarkan Swin-Tiny sebagai model 3 dan perlu diperbarui ke RegNet.
 - **Evaluasi:** accuracy, precision, recall, F1 (weighted), ROC-AUC (macro one-vs-rest dari `softmax(logits)`), dan
   confusion matrix yang dinormalisasi per baris. Semua metrik dirata-ratakan dari 5 fold.
 
+Tabel berikut menunjukkan pengaturan bawaan skrip saat ini. Angka CNN modifikasi yang sudah diterbitkan berasal dari training dengan Augmented Train saja. [Riwayat eksperimen](docs/experiment_history.md)
+
 | Pengaturan | CNN baseline | CNN modifikasi | RegNetY-400MF |
 | --- | --- | --- | --- |
-| Epoch maksimum | 10 | 30 | 10 |
+| Epoch maksimum | 100 | 30 | 10 |
 | Batch size | 32 | 32 | 16 |
 | Optimizer / learning rate | Adam / 0,001 | Adam / 0,001 | Adam / 0,001 |
 | Seed per fold | 42 | 42 | 42 |
@@ -236,25 +233,22 @@ optimasi juga berbeda.
 ### Rata-rata lima fold
 
 | Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- | --- | --- |
-| CNN baseline | 43,47 ± 9,72% | 35,57 ± 5,22% | 43,47 ± 9,72% | 36,37 ± 8,08% | 0,7408 ± 0,0384 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| CNN baseline | 49,37 ± 3,35% | 43,79 ± 4,89% | 49,37 ± 3,35% | 43,19 ± 4,26% | 0,7432 ± 0,0474 |
 | CNN modifikasi | 51,81 ± 5,48% | 43,49 ± 9,81% | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
 | RegNetY-400MF | 75,85 ± 5,80% | 76,97 ± 6,60% | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
 
-Nilai ditampilkan sebagai **mean ± standar deviasi sampel** (`ddof=1`) dari lima fold. RegNet unggul **24,04 poin
-persentase** pada accuracy dan **30,81 poin persentase** pada F1 weighted dari CNN modifikasi. Keunggulan ini tidak
-dapat dikaitkan hanya pada arsitektur, karena RegNet juga memakai bobot pretrained ImageNet sedangkan kedua CNN dilatih
-dari nol.
+Rata-rata dan simpangan baku sampel dihitung dari lima baris fold pada masing-masing CSV. RegNetY-400MF memperoleh akurasi tertinggi pada setiap fold. [Pembahasan hasil tiga model](README.md#hasil-rata-rata-evaluasi-dari-kelima-fold)
 
 ### Hasil per fold
 
 | Model | Fold | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
-| --- | --- | --- | --- | --- | --- | --- |
-| CNN baseline | 1 | 52,70% | 41,00% | 52,70% | 43,32% | 0,7791 |
-| CNN baseline | 2 | 46,34% | 36,47% | 46,34% | 39,10% | 0,7105 |
-| CNN baseline | 3 | 46,88% | 39,43% | 46,88% | 41,04% | 0,6952 |
-| CNN baseline | 4 | 44,44% | 32,94% | 44,44% | 35,56% | 0,7788 |
-| CNN baseline | 5 | 26,98% | 28,02% | 26,98% | 22,85% | 0,7406 |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| CNN baseline | 1 | 51,35% | 42,32% | 51,35% | 42,45% | 0,7606 |
+| CNN baseline | 2 | 50,00% | 40,71% | 50,00% | 41,62% | 0,6790 |
+| CNN baseline | 3 | 43,75% | 38,15% | 43,75% | 38,49% | 0,7082 |
+| CNN baseline | 4 | 49,38% | 48,43% | 49,38% | 43,33% | 0,7843 |
+| CNN baseline | 5 | 52,38% | 49,34% | 52,38% | 50,07% | 0,7838 |
 | CNN modifikasi | 1 | 44,59% | 26,60% | 44,59% | 33,32% | 0,7394 |
 | CNN modifikasi | 2 | 56,10% | 44,74% | 56,10% | 49,43% | 0,7819 |
 | CNN modifikasi | 3 | 57,81% | 51,90% | 57,81% | 53,46% | 0,7359 |
@@ -266,10 +260,4 @@ dari nol.
 | RegNetY-400MF | 4 | 71,60% | 72,47% | 71,60% | 70,74% | 0,9396 |
 | RegNetY-400MF | 5 | 82,54% | 84,87% | 82,54% | 81,74% | 0,9464 |
 
-CNN baseline tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3
-(57,81%) dan terendah pada fold 1 (44,59%). RegNet tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%).
-Ukuran Test hanya 63 sampai 82 gambar per fold, sehingga skor cukup sensitif terhadap pembagian data.
-
-CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv),
-[CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv), dan
-[RegNet](results/regnet/metrics_5fold.csv).
+Berkas evaluasi Original Test tersedia untuk ketiga model. [CNN baseline](results/initial/cnn/metrics_5fold.csv) · [CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv) · [RegNetY-400MF](results/initial/regnet/metrics_5fold.csv)
