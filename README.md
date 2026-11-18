@@ -1,7 +1,13 @@
 # Klasifikasi Citra Lesi Kulit dengan CNN dan RegNet
 
 ## Ringkasan
-Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Proyek ini membandingkan CNN baseline dari materi, CNN dengan arsitektur yang dimodifikasi, dan Swin-Tiny untuk mengklasifikasikan enam kelas citra kulit.
+Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** menggunakan [Mpox Skin Lesion Dataset v2.0 (MSLD v2.0)](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data). Proyek ini membandingkan CNN baseline dari materi, CNN dengan arsitektur yang dimodifikasi, dan RegNet untuk mengklasifikasikan enam kelas citra kulit (`Chickenpox`, `Cowpox`,`HFMD`,`Healthy`,`Measles`, dan `Monkeypox`). Dataset ini punya 755 gambar asli yang sudaah dibagi menjadi 5 fold (Train, Valid, Test). Setiap fold juga memiliki sekitar 7500 gambar augmentasi untuk training. Semua gambar kemudian di-resize menjadi 100 x 100.
+
+|Model|Arsitektur|Parameter|
+|---|---|---|
+|`cnn_baseline`|2 blok Conv-ReLU-Maxpool (20, 50, kernel 5) -> Flatten -> Linear.|Sekitar 51 rb|
+|`cnn_modified`|3 blook Conv-BatchNorm-ELU-MaxPool (32-64-128, kernel 3) -> Global Avg Pool -> Dropout 0.4 -> Linear 128 -> ELU -> Dropout 0.3 -> Linear.|Sekitar 111rb|
+|`regnet_y_400mf`|RegNetY-400MF [1] pretrained ImageNet, layer terakhir diganti 6 kelas.|Sekitar 3,9jt|
 
 **Status per 17 November 2026:** hasil lima fold untuk dua CNN sudah tersedia dan diverifikasi ulang dari checkpoint lokal. Swin sedang dijalankan oleh penulis; hasilnya belum dimasukkan. Repositori ini belum menyatakan eksperimen tiga model selesai.
 
