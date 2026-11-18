@@ -1,5 +1,5 @@
 # Klasifikasi Citra Lesi Kulit dengan CNN dan RegNet
-![Banner Mpox Skin Lesion Classification](banner.png)
+![Banner Mpox Skin Lesion Classification](banner (1) 1.png)
 
 ## Ringkasan
 
