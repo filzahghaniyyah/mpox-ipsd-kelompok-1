@@ -63,7 +63,6 @@ Test (*.py)                 evaluasi 5 fold: metrik, confusion matrix
 scripts/                    pengumpulan hasil dan pemeriksaan isi repositori
 results/initial/            grafik dan CSV pada subfolder cnn, cnn_modified, dan regnet
 results/                    distribusi dataset dan grafik perbandingan tiga model
-docs/                       riwayat verifikasi dan petunjuk untuk eksperimen lanjutan
 ```
 
 ## Alur Kerja
@@ -211,7 +210,7 @@ flowchart LR
 - **Evaluasi:** accuracy, precision, recall, F1 (weighted), ROC-AUC (macro one-vs-rest dari `softmax(logits)`), dan
   confusion matrix yang dinormalisasi per baris. Semua metrik dirata-ratakan dari 5 fold.
 
-Tabel berikut menunjukkan pengaturan bawaan skrip saat ini. Angka CNN modifikasi yang sudah diterbitkan berasal dari training dengan Augmented Train saja. [Riwayat eksperimen](docs/experiment_history.md)
+Tabel berikut menunjukkan pengaturan bawaan skrip saat ini. Angka CNN modifikasi yang sudah diterbitkan berasal dari training dengan Augmented Train saja.
 
 | Pengaturan | CNN baseline | CNN modifikasi | RegNetY-400MF |
 | --- | --- | --- | --- |
