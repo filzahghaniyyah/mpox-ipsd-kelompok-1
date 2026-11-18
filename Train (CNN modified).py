@@ -1,3 +1,4 @@
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score
 import torch
 import torch.nn as nn
 import matplotlib.pyplot as plt
@@ -11,36 +12,47 @@ from Utils.getData import getImageLabel
 from Models.CNN_modified import ModifiedCNN
 
 
-from Utils.runtime import options, select_device, save_run_config, save_history
+def predict(model, data_loader, device):
+    model.eval()
+    y_true_list, y_prob_list = [], []
+    with torch.no_grad():
+        for src, trg in data_loader:
+            src = src.to(device)
+            pred = model(src)
+            probs = torch.softmax(pred, dim=1)
+            y_true_list.extend(trg.argmax(dim=1).cpu().tolist())
+            y_prob_list.extend(probs.cpu().tolist())
+    return torch.tensor(y_true_list), torch.tensor(y_prob_list)
 
 
 def main():
-    args = options("cnn_modified", training=True)
-    BATCH_SIZE = args.batch_size
-    EPOCH = args.epochs
-    LEARNING_RATE = args.learning_rate
-    PATIENCE = 5
+    BATCH_SIZE = 32
+    EPOCH = 30
+    LEARNING_RATE = 0.001
+    MODEL_NAME = "ModifiedCNN"
+    N_CLASSES = 6
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = select_device(args.device)
-    root = args.data_root
-    output_dir = args.output_dir
-    save_run_config(args, "cnn_modified")
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs" / "model 2 (CNN modified)"
     output_dir.mkdir(parents=True, exist_ok=True)
 
     original_dataset_path = root / "Original Images" / "Original Images" / "FOLDS"
     augmented_dataset_path = root / "Augmented Images" / "Augmented Images" / "FOLDS_AUG"
 
     for fold in range(1, 6):
-        torch.manual_seed(args.seed)
-
+        torch.manual_seed(42)
         original_train = getImageLabel(original_dataset_path / f"fold{fold}" / "Train")
         augmented_train = getImageLabel(augmented_dataset_path / f"fold{fold}_AUG" / "Train")
         train_dataset = ConcatDataset([original_train, augmented_train])
+
         valid_dataset = getImageLabel(original_dataset_path / f"fold{fold}" / "Valid")
+        test_dataset = getImageLabel(original_dataset_path / f"fold{fold}" / "Test")
 
         train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
         valid_loader = DataLoader(valid_dataset, batch_size=BATCH_SIZE, shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
         model = ModifiedCNN(output=6, dropout1=0.4, dropout2=0.3).to(device)
         optimizer = Adam(model.parameters(), lr=LEARNING_RATE)
@@ -49,7 +61,6 @@ def main():
 
         loss_train_all, loss_valid_all = [], []
         best_valid_loss = float("inf")
-        epochs_without_improvement = 0
 
         for epoch in range(EPOCH):
             train_loss = 0.0
@@ -89,7 +100,6 @@ def main():
 
             if valid_loss < best_valid_loss:
                 best_valid_loss = valid_loss
-                epochs_without_improvement = 0
 
                 torch.save({
                     "epoch": epoch,
@@ -98,23 +108,28 @@ def main():
                     "loss": train_loss,
                     "valid_loss": valid_loss,
                     "fold": fold,
-                    "training_data": "Original Train + Augmented Train",
-                    "classes": (
-                        "Chickenpox", "Cowpox", "HFMD",
-                        "Healthy", "Measles", "Monkeypox"
-                    ),
+                    "classes": tuple(original_train.classes),
                 }, output_dir / f"ModifiedCNN_fold{fold}_best.pt")
-            else:
-                epochs_without_improvement += 1
-                if epochs_without_improvement >= PATIENCE:
-                    print("Early stopping pada epoch", epoch + 1)
-                    break
 
-        save_history(output_dir, fold, loss_train_all, loss_valid_all)
+        checkpoint = torch.load(output_dir / f"ModifiedCNN_fold{fold}_best.pt", weights_only=True)
+        model.load_state_dict(checkpoint["model_state_dict"])
+
+        y_true, probs = predict(model, test_loader, device)
+        y_pred = probs.argmax(1)
+        p, r, f1, _ = precision_recall_fscore_support(y_true.numpy(), y_pred.numpy(), average="macro", zero_division=0)
+
+        row = {
+            "model": MODEL_NAME, "fold": fold,
+            "accuracy": accuracy_score(y_true.numpy(), y_pred.numpy()),
+            "precision_macro": p, "recall_macro": r, "f1_macro": f1,
+            "roc_auc_score": roc_auc_score(y_true.numpy(), probs.numpy(), multi_class="ovr", average="macro", labels=list(range(N_CLASSES))),
+            "best_epoch": checkpoint["epoch"] + 1,
+        }
+        print({kk: (round(v, 4) if isinstance(v, float) else v) for kk, v in row.items()})
+
         plt.figure()
-        epochs_done = range(1, len(loss_train_all) + 1)
-        plt.plot(epochs_done, loss_train_all, label="Training")
-        plt.plot(epochs_done, loss_valid_all, label="Validation")
+        plt.plot(range(1, EPOCH + 1), loss_train_all, color="#ffc1e2", label='Training')
+        plt.plot(range(1, EPOCH + 1), loss_valid_all, color="#bde3ff", label='Validation')
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.legend()
