@@ -53,7 +53,6 @@ def save_run_config(args, model):
         "training_data": "Original Train + Augmented Train, fold yang sama",
         "checkpoint_selection": "minimum Original Valid loss",
         "preprocessing": "OpenCV BGR, resize 100x100, /255, CHW float32",
-        "early_stopping_patience": 5 if model == "cnn_modified" else None,
         "scheduler": "ReduceLROnPlateau(factor=0.5, patience=2)" if model == "cnn_modified" else None,
         "versions": {p: metadata.version(p) for p in ("torch", "torchvision", "numpy", "opencv-python")},
     }
