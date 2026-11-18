@@ -219,7 +219,7 @@ Tabel berikut menunjukkan pengaturan bawaan skrip yang dipakai untuk hasil di RE
 | Optimizer / learning rate | Adam / 0,001 | Adam / 0,001 | Adam / 0,001 |
 | Seed per fold | 42 | 42 | 42 |
 | Pemilihan checkpoint | Valid loss minimum | Valid loss minimum | Valid loss minimum |
-| Early stopping | Tidak | Patience 5 | Tidak |
+| Early stopping | Tidak | Tidak | Tidak |
 | Scheduler | Tidak | ReduceLROnPlateau, factor 0,5, patience 2 | Tidak |
 | Inisialisasi | Acak | Acak | Pretrained ImageNet (`IMAGENET1K_V2`), seluruh layer di-fine-tune |
 
