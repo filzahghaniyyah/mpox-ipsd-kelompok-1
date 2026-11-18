@@ -173,7 +173,7 @@ dan belum memvalidasi kemampuan diagnosis klinis.
 
 | CNN baseline | CNN modifikasi | RegNetY-400MF |
 | --- | --- | --- |
-| ![Training CNN fold 1](results/initial/cnn/training_fold1.png) | ![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png) | ![Training RegNet fold 1](results/regnet/training_fold1.png) |
+| ![Training CNN fold 1](results/initial/cnn/training_fold1.png) | ![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png) | ![Training RegNet fold 1](results/initial/regnet/training_fold1.png) |
 
 Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai untuk Test dipilih pada epoch 1, saat
 validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik kedua CNN terdapat di
