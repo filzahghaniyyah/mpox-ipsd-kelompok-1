@@ -210,7 +210,7 @@ flowchart LR
 - **Evaluasi:** accuracy, precision, recall, F1 (weighted), ROC-AUC (macro one-vs-rest dari `softmax(logits)`), dan
   confusion matrix yang dinormalisasi per baris. Semua metrik dirata-ratakan dari 5 fold.
 
-Tabel berikut menunjukkan pengaturan bawaan skrip saat ini. Angka CNN modifikasi yang sudah diterbitkan berasal dari training dengan Augmented Train saja.
+Tabel berikut menunjukkan pengaturan bawaan skrip yang dipakai untuk hasil di README.
 
 | Pengaturan | CNN baseline | CNN modifikasi | RegNetY-400MF |
 | --- | --- | --- | --- |
@@ -234,7 +234,7 @@ optimasi juga berbeda.
 | Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
 | --- | ---: | ---: | ---: | ---: | ---: |
 | CNN baseline | 49,37 ± 3,35% | 43,79 ± 4,89% | 49,37 ± 3,35% | 43,19 ± 4,26% | 0,7432 ± 0,0474 |
-| CNN modifikasi | 51,81 ± 5,48% | 43,49 ± 9,81% | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
+| CNN modifikasi | 51,97 ± 3,57% | 48,24 ± 7,86% | 51,97 ± 3,57% | 47,25 ± 4,52% | 0,7869 ± 0,0480 |
 | RegNetY-400MF | 75,85 ± 5,80% | 76,97 ± 6,60% | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
 
 Rata-rata dan simpangan baku sampel dihitung dari lima baris fold pada masing-masing CSV. RegNetY-400MF memperoleh akurasi tertinggi pada setiap fold. [Pembahasan hasil tiga model](README.md#hasil-rata-rata-evaluasi-dari-kelima-fold)
@@ -248,11 +248,11 @@ Rata-rata dan simpangan baku sampel dihitung dari lima baris fold pada masing-ma
 | CNN baseline | 3 | 43,75% | 38,15% | 43,75% | 38,49% | 0,7082 |
 | CNN baseline | 4 | 49,38% | 48,43% | 49,38% | 43,33% | 0,7843 |
 | CNN baseline | 5 | 52,38% | 49,34% | 52,38% | 50,07% | 0,7838 |
-| CNN modifikasi | 1 | 44,59% | 26,60% | 44,59% | 33,32% | 0,7394 |
-| CNN modifikasi | 2 | 56,10% | 44,74% | 56,10% | 49,43% | 0,7819 |
-| CNN modifikasi | 3 | 57,81% | 51,90% | 57,81% | 53,46% | 0,7359 |
-| CNN modifikasi | 4 | 48,15% | 46,37% | 48,15% | 41,32% | 0,7339 |
-| CNN modifikasi | 5 | 52,38% | 47,84% | 52,38% | 43,98% | 0,8124 |
+| CNN modifikasi | 1 | 47,30% | 35,31% | 47,30% | 40,28% | 0,7980 |
+| CNN modifikasi | 2 | 56,10% | 53,81% | 56,10% | 51,66% | 0,8370 |
+| CNN modifikasi | 3 | 53,13% | 50,85% | 53,13% | 49,88% | 0,7565 |
+| CNN modifikasi | 4 | 49,38% | 46,68% | 49,38% | 45,41% | 0,7205 |
+| CNN modifikasi | 5 | 53,97% | 54,57% | 53,97% | 49,04% | 0,8222 |
 | RegNetY-400MF | 1 | 74,32% | 76,72% | 74,32% | 73,55% | 0,9234 |
 | RegNetY-400MF | 2 | 69,51% | 68,82% | 69,51% | 68,68% | 0,9207 |
 | RegNetY-400MF | 3 | 81,25% | 81,95% | 81,25% | 80,82% | 0,9374 |
