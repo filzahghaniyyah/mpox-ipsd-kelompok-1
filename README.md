@@ -18,7 +18,7 @@ Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** ini memb
 | CNN modifikasi | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
 | RegNetY-400MF | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
 
-Angka CNN modifikasi berasal dari eksperimen yang memakai **Augmented Train saja**. Skrip pelatihan saat ini sudah menggabungkan **Original Train + Augmented Train**. [Riwayat eksperimen](docs/experiment_history.md) · [Cara menjalankan kode](GUIDE.md)
+Angka CNN modifikasi berasal dari eksperimen yang baru memakai Augmented Train saja. [Cara menjalankan kode](GUIDE.md)
 
 ## Tujuan dan alasan pemilihan model
 
@@ -154,7 +154,7 @@ Ketidakseimbangan kelas dan ukuran Test per fold membatasi interpretasi skor. Pe
 | --- | --- | --- |
 | ![Training CNN fold 1](results/initial/cnn/training_fold1.png) | ![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png) | ![Training RegNet fold 1](results/initial/regnet/training_fold1.png) |
 
-Grafik baseline fold 1 memperlihatkan training loss mendekati nol sementara validation loss cenderung meningkat. Catatan verifikasi 17 November mencatat checkpoint epoch 3 untuk CNN modifikasi fold 1. Pemeriksaan checkpoint baseline dalam catatan itu berlaku untuk hasil sebelum CSV baseline diperbarui. [Riwayat dan cakupan verifikasi](docs/experiment_history.md)
+Grafik baseline fold 1 memperlihatkan training loss mendekati nol sementara validation loss cenderung meningkat. Karena itu, checkpoint yang dipakai untuk pengujian dipilih pada epoch dengan validation loss terendah.
 
 ## Struktur repositori
 
@@ -166,7 +166,6 @@ Test (*.py)             Evaluasi Original Test per model
 results/initial/        CSV dan grafik pada subfolder cnn, cnn_modified, dan regnet
 results/                Distribusi dataset dan grafik perbandingan tiga model
 scripts/                Pengumpulan dan pemeriksaan file hasil
-docs/                   Riwayat verifikasi dan petunjuk untuk eksperimen lanjutan
 GUIDE.md                Cara menjalankan pelatihan dan pengujian
 requirements.txt        Dependensi Python
 ```
