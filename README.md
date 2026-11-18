@@ -13,6 +13,12 @@ Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** mengguna
 
 **Catatan hasil awal:** kode yang menyertai eksperimen CNN modifikasi menggunakan Augmented Train saja. Versi training di repositori ini telah diperbaiki menjadi Original Train + Augmented Train sesuai tugas. Angka pada `results/initial/` tetap merupakan hasil lama, bukan hasil pelatihan ulang kode yang diperbaiki. Lihat [riwayat dan batas interpretasi](docs/experiment_history.md).
 
+| Model | Accuracy | F1 weighted | ROC-AUC macro OvR |
+| --- | --- | --- | --- |
+| CNN baseline | 43,47 ± 9,72% | 36,37 ± 8,08% | 0,7408 ± 0,0384 |
+| CNN modifikasi | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
+| **RegNetY-400MF** | **75,85 ± 5,80%** | **75,11 ± 5,90%** | **0,9335 ± 0,0110** |
+
 ## Tujuan dan alasan pemilihan model
 
 Tujuan eksperimen adalah menilai kemampuan model membedakan Chickenpox, Cowpox, HFMD, Healthy, Measles, dan Monkeypox pada dataset yang ditentukan. CNN baseline menjadi pembanding terhadap implementasi materi. CNN modifikasi menguji kombinasi tiga blok konvolusi, BatchNorm, ELU, pooling global, dan dropout. Swin-Tiny memberi pembanding berbasis Transformer dengan attention pada jendela lokal yang bergeser.
@@ -29,39 +35,50 @@ Sumber data: [Mpox Skin Lesion Dataset v2.0 di Kaggle](https://www.kaggle.com/da
 - Model dan optimizer diinisialisasi ulang untuk masing-masing dari lima fold. Split bawaan dataset dipertahankan; tidak membuat pembagian acak baru.
 - Dataset, arsip dataset, dan bobot model tidak diunggah ke repositori.
 
-## Arsitektur dan metode
+## Cara menjalankan
+1. Clone repositori, buat virtual environment, lalu instal dependensi. Versi yang diuji tercantum pada
+   `requirements.txt` (Python lokal 3.14.4). Untuk GPU, gunakan pasangan torch/torchvision yang sesuai petunjuk resmi
+   PyTorch.
 
-![Diagram arsitektur CNN baseline, CNN modifikasi, dan Swin-Tiny dengan warna pink muda dan biru muda](assets/architecture-pink-blue.png)
+```powershell
+git clone https://github.com/filzahghaniyyah/mpox-skin-lesion-classification.git
+cd mpox-skin-lesion-classification
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+2. Unduh dan ekstrak dataset Kaggle secara lokal dengan struktur berikut.
 
-Diagram mengikuti urutan layer pada source proyek. Notasi ukuran CNN adalah C × H × W; notasi stage Swin adalah H × W × C. [Unduh PNG diagram](assets/architecture-pink-blue.png).
+```text
+DATA_ROOT/
+├── Original Images/Original Images/FOLDS/
+│   ├── fold1/Train|Valid|Test/<kelas>/
+│   └── ... fold5/
+└── Augmented Images/Augmented Images/FOLDS_AUG/
+    ├── fold1_AUG/Train/<kelas>/
+    └── ... fold5_AUG/
+```
 
-| Komponen | CNN baseline | CNN modifikasi | Swin-Tiny |
-|---|---|---|---|
-| Implementasi | [CNN.py](Models/CNN.py) | [CNN_modified.py](Models/CNN_modified.py) | [SwinModel.py](Models/SwinModel.py) |
-| Ukuran internal | 100 × 100 | 160 × 160 setelah interpolasi dari 100 × 100 | 224 × 224 setelah interpolasi dari 100 × 100 |
-| Ekstraksi fitur | Conv 3→20→50, kernel 5, ReLU, MaxPool 3 | Conv 3→32→64→128, kernel 3, BatchNorm, ELU, MaxPool 2 | Hierarchical shifted-window self-attention |
-| Kepala klasifikasi | Flatten 4050 → Linear 6 | Global Average Pooling → Dense 128 → Linear 6 | Kepala Swin diganti Linear 768 → 6 |
-| Dropout eksplisit CNN | Tidak ada | 0,4 dan 0,3 | Mengikuti implementasi Swin torchvision |
-| Parameter terlatih | 50.876 | 110.758 | 27.523.968 |
-| Inisialisasi | Acak | Acak | `weights=None`, tanpa bobot pretrained |
+3. Jalankan training lalu testing. Semua perintah berjalan dari root repositori.
 
-CNN mempelajari pola lokal melalui filter konvolusi. BatchNorm menormalkan aktivasi dalam proses training; ELU menjadi alternatif ReLU, sedangkan dropout dan global average pooling digunakan dalam CNN modifikasi. Swin mempelajari hubungan antarfitur dalam jendela dan menghubungkan jendela melalui pergeseran. Dasar Swin: [Liu dkk., 2021](https://arxiv.org/abs/2103.14030); implementasi: [torchvision swin_t](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.swin_t.html).
+```powershell
+# CNN baseline dan CNN modifikasi: --data-root menunjuk ke DATA_ROOT, --device cpu adalah default
+.\.venv\Scripts\python.exe "Train (CNN).py" --data-root "D:\data\msld"
+.\.venv\Scripts\python.exe "Test (CNN).py" --data-root "D:\data\msld"
 
-Semua model menghasilkan enam **logits** dan dilatih dengan `CrossEntropyLoss`. Label loader berbentuk one-hot float; indeks kelas diperoleh dengan `argmax` saat evaluasi. `softmax(logits)` hanya digunakan untuk probabilitas ROC-AUC. Precision, recall, dan F1 memakai rata-rata **weighted**; ROC-AUC memakai **macro one-vs-rest**. Semua metrik dirata-ratakan antar lima fold dengan bobot fold sama. Confusion matrix dinormalisasi per baris pada setiap fold, kemudian dirata-ratakan. [Definisi ROC-AUC multikelas](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html).
+.\.venv\Scripts\python.exe "Train (CNN modified).py" --data-root "D:\data\msld"
+.\.venv\Scripts\python.exe "Test (CNN modified).py" --data-root "D:\data\msld"
 
-### Konfigurasi default kode training saat ini
+# RegNet: folder dataset diletakkan langsung di root repositori (DATA_ROOT = root repositori)
+.\.venv\Scripts\python.exe "Train (RegNet).py"
+.\.venv\Scripts\python.exe "Test (RegNet).py"
+```
 
-| Pengaturan | CNN baseline | CNN modifikasi | Swin-Tiny |
-|---|---|---|---|
-| Epoch maksimum | 10 | 30 | 10 |
-| Batch size | 32 | 32 | 8 |
-| Optimizer / learning rate | Adam / 0,001 | Adam / 0,001 | Adam / 0,001 |
-| Seed per fold | 42 | 42 | 42 |
-| Pemilihan checkpoint | Valid loss minimum | Valid loss minimum | Valid loss minimum |
-| Early stopping | Tidak | Patience 5 | Tidak |
-| Scheduler | Tidak | ReduceLROnPlateau, factor 0,5, patience 2 | Tidak |
+Untuk CNN, `--epochs`, `--batch-size`, `--learning-rate`, `--seed`, `--output-root`, dan `--checkpoint-root` dapat
+diatur dari command line. Script RegNet memakai pengaturan tetap di dalam file dan otomatis memakai GPU lewat
+`torch-directml` bila paket itu terpasang; jika tidak, berjalan di CPU.
 
-Konfigurasi di atas adalah default kode yang dibagikan, bukan bukti bahwa semua hasil lama menggunakan kode ini. Run baru menyimpan `run_config.json` dan `history_fold*.csv`. Untuk perbandingan arsitektur yang lebih terkontrol, samakan kebijakan data dan anggaran training, lalu dokumentasikan setiap perbedaan yang masih diperlukan.
+Checkpoint terbaik dan output baru disimpan lokal di `outputs/model 1 (CNN)`, `outputs/model 2 (CNN modified)`, dan
+`outputs/model 3 (RegNet)`. Folder ini diabaikan Git.
 
 ### Karakteristik distribusi data pada setiap kelas
 
@@ -76,7 +93,7 @@ Hitungan diperoleh langsung dari folder lokal, bukan dari perkiraan. Dalam satu 
 | Measles | 55 | 7.28% |
 | Monkeypox | 284 | 37.62% |
 
-Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit, dengan rasio sekitar **5,16 : 1**. Data tidak seimbang. Jumlah file Augmented Train pada setiap kelas adalah 14 kali jumlah Original Train, sehingga distribusi proporsi kelas tetap tidak seimbang. Jumlah file bukan jumlah pasien.
+Monkeypox merupakan kelas terbesar, sedangkan Measles paling sedikit. Datanya tidak seimbang, jumlah file Augmented Train pada setiap kelas adalah 14 kali jumlah Original Train, sehingga distribusi proporsi kelas tetap tidak seimbang. Jumlah file juga bukan merupakan jumlah pasien.
 
 ![Distribusi kelas](results/class_distribution.png)
 
@@ -144,37 +161,68 @@ CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv) dan [CNN modifik
 
 ### Hasil rata-rata evaluasi dari kelima fold
 
+#### Rata-rata lima fold
+
 | Model | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
 | --- | --- | --- | --- | --- | --- |
-| CNN baseline | 43.47 ± 9.72% | 35.57 ± 5.22% | 43.47 ± 9.72% | 36.37 ± 8.08% | 0.7408 ± 0.0384 |
-| CNN modifikasi | 51.81 ± 5.48% | 43.49 ± 9.81% | 51.81 ± 5.48% | 44.30 ± 7.74% | 0.7607 ± 0.0350 |
-| Swin-Tiny | Sedang training | Sedang training | Sedang training | Sedang training | Sedang training |
+| CNN baseline | 43,47 ± 9,72% | 35,57 ± 5,22% | 43,47 ± 9,72% | 36,37 ± 8,08% | 0,7408 ± 0,0384 |
+| CNN modifikasi | 51,81 ± 5,48% | 43,49 ± 9,81% | 51,81 ± 5,48% | 44,30 ± 7,74% | 0,7607 ± 0,0350 |
+| RegNetY-400MF | 75,85 ± 5,80% | 76,97 ± 6,60% | 75,85 ± 5,80% | 75,11 ± 5,90% | 0,9335 ± 0,0110 |
 
-Nilai ditampilkan sebagai **mean ± standar deviasi sampel** (`ddof=1`) dari lima fold, bukan confidence interval. Rerata dihitung hanya dari baris fold 1–5; baris `mean` dan `std` yang sudah ada di CSV tidak dihitung lagi. ROC-AUC menggunakan skala 0–1.
+Nilai ditampilkan sebagai **mean ± standar deviasi sampel** (`ddof=1`) dari lima fold. RegNet unggul **24,04 poin
+persentase** pada accuracy dan **30,81 poin persentase** pada F1 weighted dari CNN modifikasi. Keunggulan ini tidak
+dapat dikaitkan hanya pada arsitektur, karena RegNet juga memakai bobot pretrained ImageNet sedangkan kedua CNN dilatih
+dari nol.
 
-CNN modifikasi unggul **8,34 poin persentase** pada accuracy dan **7,93 poin persentase** pada F1 weighted dari CNN baseline dalam hasil awal. Perbedaan protokol training membatasi kesimpulan sebab-akibat. Model terbaik di antara ketiganya belum dapat ditentukan.
+#### Hasil per fold
 
-![Perbandingan hasil awal](results/model_comparison.png)
+| Model | Fold | Accuracy | Precision weighted | Recall weighted | F1 weighted | ROC-AUC macro OvR |
+| --- | --- | --- | --- | --- | --- | --- |
+| CNN baseline | 1 | 52,70% | 41,00% | 52,70% | 43,32% | 0,7791 |
+| CNN baseline | 2 | 46,34% | 36,47% | 46,34% | 39,10% | 0,7105 |
+| CNN baseline | 3 | 46,88% | 39,43% | 46,88% | 41,04% | 0,6952 |
+| CNN baseline | 4 | 44,44% | 32,94% | 44,44% | 35,56% | 0,7788 |
+| CNN baseline | 5 | 26,98% | 28,02% | 26,98% | 22,85% | 0,7406 |
+| CNN modifikasi | 1 | 44,59% | 26,60% | 44,59% | 33,32% | 0,7394 |
+| CNN modifikasi | 2 | 56,10% | 44,74% | 56,10% | 49,43% | 0,7819 |
+| CNN modifikasi | 3 | 57,81% | 51,90% | 57,81% | 53,46% | 0,7359 |
+| CNN modifikasi | 4 | 48,15% | 46,37% | 48,15% | 41,32% | 0,7339 |
+| CNN modifikasi | 5 | 52,38% | 47,84% | 52,38% | 43,98% | 0,8124 |
+| RegNetY-400MF | 1 | 74,32% | 76,72% | 74,32% | 73,55% | 0,9234 |
+| RegNetY-400MF | 2 | 69,51% | 68,82% | 69,51% | 68,68% | 0,9207 |
+| RegNetY-400MF | 3 | 81,25% | 81,95% | 81,25% | 80,82% | 0,9374 |
+| RegNetY-400MF | 4 | 71,60% | 72,47% | 71,60% | 70,74% | 0,9396 |
+| RegNetY-400MF | 5 | 82,54% | 84,87% | 82,54% | 81,74% | 0,9464 |
+
+CNN baseline tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3
+(57,81%) dan terendah pada fold 1 (44,59%). RegNet tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%).
+Ukuran Test hanya 63 sampai 82 gambar per fold, sehingga skor cukup sensitif terhadap pembagian data.
+
+CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv),
+[CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv), dan
+[RegNet](results/regnet/metrics_5fold.csv).
 
 ### Kelebihan dan keterbatasan model yang dikembangkan
 
-| Model | Kelebihan | Keterbatasan berdasarkan eksperimen atau implementasi |
-|---|---|---|
-| CNN baseline | Arsitektur sederhana, hanya 50.876 parameter, menjadi acuan materi | Recall Chickenpox dan Measles 0%; grafik fold 1 memperlihatkan training loss menurun ketika validation loss meningkat |
-| CNN modifikasi | Hasil awal accuracy dan F1 lebih tinggi; BatchNorm, ELU, dropout, dan pooling global sudah diterapkan | Recall kelas minoritas tetap rendah; hasil awal belum berasal dari training Original + Augmented yang diperbaiki; perubahan beberapa komponen sekaligus tidak mengisolasi kontribusi masing-masing |
-| Swin-Tiny | Pembanding berbasis attention dan fitur bertingkat; kode enam kelas siap dijalankan tanpa pretrained | 27,5 juta parameter, jauh lebih berat dari dua CNN; hasil lima fold belum tersedia, sehingga keunggulan akurasi belum terbukti |
+| Model | Kelebihan | Keterbatasan |
+| --- | --- | --- |
+| CNN baseline | Arsitektur sederhana, hanya 50.876 parameter, menjadi acuan materi | Recall Chickenpox dan Measles 0%; training loss menurun ketika validation loss meningkat |
+| CNN modifikasi | Accuracy dan F1 lebih tinggi dari baseline; BatchNorm, ELU, dropout, dan pooling global sudah diterapkan | Recall kelas minoritas tetap rendah; hasil awal belum berasal dari training Original + Augmented yang diperbaiki; beberapa komponen diubah sekaligus |
+| RegNetY-400MF | Hasil terbaik pada semua metrik; bobot pretrained ImageNet membantu dataset kecil; arsitektur efisien (± 0,4 GFLOPs) | ± 3,9 juta parameter, jauh lebih berat dari dua CNN; input 100 × 100 jauh lebih kecil dari ukuran pretraining 224 × 224; perbandingan dengan CNN tidak setara karena inisialisasi berbeda |
 
-Keterbatasan bersama meliputi ketidakseimbangan kelas, ukuran Test kecil, tidak adanya evaluasi pada dataset eksternal, dan belum adanya analisis per pasien. Eksperimen ini mengevaluasi klasifikasi gambar untuk tugas perkuliahan dan belum memvalidasi kemampuan diagnosis klinis.
+Keterbatasan bersama meliputi ketidakseimbangan kelas, ukuran Test kecil, tidak adanya evaluasi pada dataset
+eksternal, dan belum adanya analisis per pasien. Eksperimen ini mengevaluasi klasifikasi gambar untuk tugas perkuliahan
+dan belum memvalidasi kemampuan diagnosis klinis.
 
 ## Grafik training
 
-Contoh fold 1 ditampilkan di bawah. Seluruh grafik lima fold berada pada [hasil CNN](results/initial/cnn) dan [hasil CNN modifikasi](results/initial/cnn_modified).
+| CNN baseline | CNN modifikasi | RegNetY-400MF |
+| --- | --- | --- |
+| ![Training CNN fold 1](results/initial/cnn/training_fold1.png) | ![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png) | ![Training RegNet fold 1](results/regnet/training_fold1.png) |
 
-![Training CNN fold 1](results/initial/cnn/training_fold1.png)
-
-![Training CNN modifikasi fold 1](results/initial/cnn_modified/training_fold1.png)
-
-Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai untuk Test dipilih pada epoch 1, saat validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik seluruh fold terdapat di [verification.json](results/initial/verification.json).
+Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai untuk Test dipilih pada epoch 1, saat
+validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik kedua CNN terdapat di
+[verification.json](results/initial/verification.json).
 
 ## Cara menjalankan
 
