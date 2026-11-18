@@ -1,7 +1,0 @@
-actual,Chickenpox,Cowpox,HFMD,Healthy,Measles,Monkeypox
-Chickenpox,0,0,0,1,0,8
-Cowpox,0,0,0,5,0,8
-HFMD,1,0,8,1,0,5
-Healthy,0,0,0,8,0,1
-Measles,0,0,2,0,0,6
-Monkeypox,0,1,0,6,0,20
