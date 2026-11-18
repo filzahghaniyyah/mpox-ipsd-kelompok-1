@@ -21,9 +21,9 @@ Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** mengguna
 
 ## Tujuan dan alasan pemilihan model
 
-Tujuan eksperimen adalah menilai kemampuan model membedakan Chickenpox, Cowpox, HFMD, Healthy, Measles, dan Monkeypox pada dataset yang ditentukan. CNN baseline menjadi pembanding terhadap implementasi materi. CNN modifikasi menguji kombinasi tiga blok konvolusi, BatchNorm, ELU, pooling global, dan dropout. Swin-Tiny memberi pembanding berbasis Transformer dengan attention pada jendela lokal yang bergeser.
+Tujuan eksperimen adalah menilai kemampuan model membedakan Chickenpox, Cowpox, HFMD, Healthy, Measles, dan Monkeypox pada dataset yang ditentukan. CNN baseline menjadi pembanding terhadap implementasi materi. CNN modifikasi menguji kombinasi tiga blok konvolusi, BatchNorm, ELU, pooling global, dan dropout. RegNetY-400MF memberi pembanding berbasis transfer learning: backbone RegNet yang efisien (± 0,4 GFLOPs) dengan bobot pretrained ImageNet, dan layer klasifikasi terakhir diganti menjadi enam kelas. Model ini dipilih karena bobot pretrained membantu dataset yang relatif kecil (755 citra original).
 
-Perbandingan ini menilai konfigurasi eksperimen secara keseluruhan. Perbedaan hasil tidak dapat langsung dianggap sebagai pengaruh satu perubahan arsitektur karena ukuran input, batch size, lama training, dan strategi optimasi juga berbeda.
+Perbandingan ini menilai konfigurasi eksperimen secara keseluruhan. Perbedaan hasil tidak dapat langsung dianggap sebagai pengaruh satu perubahan arsitektur karena ukuran input, batch size, lama training, strategi optimasi, dan inisialisasi bobot (RegNet pretrained, kedua CNN dilatih dari nol) juga berbeda.
 
 ## Dataset dan aturan pembagian
 
@@ -64,24 +64,34 @@ Tabel lengkap per kelas dan split tersedia di [dataset_distribution.csv](results
 
 ### Preprocessing yang digunakan dan pengaruhnya terhadap hasil klasifikasi
 
-Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, membagi intensitas dengan **255**, mengubah susunan kanal menjadi **CHW**, dan mengonversinya ke tensor `float32`. Urutan warna tetap **BGR**, sesuai kode dan checkpoint awal; tidak ada konversi RGB atau normalisasi ImageNet. CNN modifikasi dan Swin kemudian memperbesar tensor dengan interpolasi bilinear di dalam `forward()`.
+Loader membaca citra dengan OpenCV, melakukan resize menjadi **100 × 100**, membagi intensitas dengan **255**, mengubah susunan kanal menjadi **CHW**, dan mengonversinya ke tensor `float32`. Di tingkat loader, urutan warna tetap **BGR** dan tidak ada normalisasi ImageNet. Penyesuaian tambahan dilakukan di dalam `forward()` masing-masing model:
 
-Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensitas. Namun, detail lesi yang hilang ketika diperkecil ke 100 × 100 tidak kembali hanya dengan diperbesar ke 160 atau 224. Tidak ada eksperimen ablation dengan model dan pengaturan identik, sehingga besar pengaruh preprocessing terhadap skor belum dapat diukur secara terpisah. Peningkatan CNN modifikasi tidak boleh diklaim semata-mata akibat resize, ELU, atau dropout.
+- **CNN baseline** menerima input 100 × 100 apa adanya.
+- **CNN modifikasi** memperbesar tensor menjadi **160 × 160** dengan interpolasi bilinear.
+- **RegNetY-400MF** mengubah urutan kanal **BGR → RGB** lalu menormalisasi dengan **mean/std ImageNet** agar sesuai dengan bobot pretrained. Input tetap 100 × 100.
+
+Augmentasi tidak dibuat ulang di kode. Proyek memakai file **Augmented Images** bawaan dataset (± 14 kali jumlah Original Train per kelas) yang hanya digabungkan ke data training. Valid dan Test tetap memakai citra original.
+
+Resize menyeragamkan dimensi input dan pembagian 255 menyetarakan skala intensitas, sehingga training lebih stabil. Normalisasi ImageNet pada RegNet membuat distribusi input sesuai dengan data saat bobot pretrained dilatih. Augmentasi menambah variasi data training (± 7.500 citra per fold), tetapi proporsi kelas tetap tidak seimbang karena setiap kelas diperbanyak dengan faktor yang sama. Detail lesi yang hilang ketika diperkecil ke 100 × 100 juga tidak kembali hanya dengan diperbesar ke 160 × 160, dan 100 × 100 jauh lebih kecil dari ukuran pretraining RegNet (224 × 224).
+
+Tidak ada eksperimen ablation dengan model dan pengaturan identik, sehingga besar pengaruh setiap tahap preprocessing terhadap skor belum dapat diukur secara terpisah. Peningkatan CNN modifikasi tidak boleh diklaim semata-mata akibat resize, ELU, atau dropout, dan keunggulan RegNet tidak boleh diklaim semata-mata akibat normalisasi ImageNet.
 
 ### Kemampuan model untuk mengklasifikasi 6 kelas
 
-**Belum secara merata.** CNN baseline memperoleh accuracy rata-rata **43,47%** dan CNN modifikasi **51,81%**. Recall per kelas menunjukkan kemampuan lebih baik pada HFMD dan Monkeypox daripada Chickenpox, Cowpox, dan Measles. Skor weighted dipengaruhi jumlah sampel kelas; karena itu confusion matrix dan recall setiap kelas juga diperiksa.
+**Belum secara merata.** CNN baseline memperoleh accuracy rata-rata **43,47%**, CNN modifikasi **51,81%**, dan RegNetY-400MF **75,85%**. Ketiga model lebih mampu mengenali HFMD dan Monkeypox daripada Chickenpox, Cowpox, dan Measles. Skor weighted dipengaruhi jumlah sampel kelas; karena itu confusion matrix dan recall setiap kelas juga diperiksa.
 
-| Kelas | Recall rata-rata CNN | Recall rata-rata CNN modifikasi |
-| --- | --- | --- |
-| Chickenpox | 0.00% | 2.22% |
-| Cowpox | 26.43% | 2.86% |
-| HFMD | 51.08% | 73.08% |
-| Healthy | 39.27% | 37.29% |
-| Measles | 0.00% | 8.00% |
-| Monkeypox | 70.61% | 84.88% |
+RegNetY-400MF adalah satu-satunya model yang mengenali keenam kelas dengan recall di atas 45%. Model ini sangat baik pada HFMD (92%) dan Healthy (90%), tetapi Chickenpox (48%) dan Cowpox (56%) masih sering tertukar dengan Monkeypox. Kedua CNN praktis gagal pada kelas minoritas: recall Chickenpox dan Measles di bawah 10%.
 
-Recall di tabel adalah rerata lima recall per fold, bukan recall dari satu confusion matrix gabungan. Swin belum dapat dinilai sebelum pengujian lima fold selesai.
+| Kelas | Recall rata-rata CNN | Recall rata-rata CNN modifikasi | Recall rata-rata RegNetY-400MF |
+| --- | --- | --- | --- |
+| Chickenpox | 0.00% | 2.22% | 48% |
+| Cowpox | 26.43% | 2.86% | 56% |
+| HFMD | 51.08% | 73.08% | 92% |
+| Healthy | 39.27% | 37.29% | 90% |
+| Measles | 0.00% | 8.00% | 66% |
+| Monkeypox | 70.61% | 84.88% | 79% |
+
+Recall di tabel adalah rerata lima recall per fold, bukan recall dari satu confusion matrix gabungan. Recall RegNetY-400MF dibaca dari diagonal confusion matrix rerata lima fold ([confusion_matrix_mean.png](results/initial/regnet/confusion_matrix_mean.png)), sehingga hanya tersedia dalam dua desimal.
 
 ### Kelas yang paling sering mengalami kesalahan klasifikasi
 
@@ -109,10 +119,15 @@ Bukti numerik: [per kelas CNN](results/initial/cnn/per_class_summary.csv), [per 
 | CNN modifikasi | 3 | 57.81% | 51.90% | 57.81% | 53.46% | 0.7359 |
 | CNN modifikasi | 4 | 48.15% | 46.37% | 48.15% | 41.32% | 0.7339 |
 | CNN modifikasi | 5 | 52.38% | 47.84% | 52.38% | 43.98% | 0.8124 |
+| RegNetY-400MF | 1 | 74.32% | 76.72% | 74.32% | 73.55% | 0.9234 |
+| RegNetY-400MF | 2 | 69.51% | 68.82% | 69.51% | 68.68% | 0.9207 |
+| RegNetY-400MF | 3 | 81.25% | 81.95% | 81.25% | 80.82% | 0.9374 |
+| RegNetY-400MF | 4 | 71.60% | 72.47% | 71.60% | 70.74% | 0.9396 |
+| RegNetY-400MF | 5 | 82.54% | 84.87% | 82.54% | 81.74% | 0.9464 |
 
-CNN baseline memiliki accuracy tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3 (57,81%) dan terendah pada fold 1 (44,59%). Variasi hasil menandakan performa sensitif terhadap pembagian data. Ukuran Test bervariasi dari 63 sampai 82 gambar per fold.
+CNN baseline memiliki accuracy tertinggi pada fold 1 (52,70%) dan terendah pada fold 5 (26,98%). CNN modifikasi tertinggi pada fold 3 (57,81%) dan terendah pada fold 1 (44,59%). RegNetY-400MF tertinggi pada fold 5 (82,54%) dan terendah pada fold 2 (69,51%), dan tetap unggul dari kedua CNN di setiap fold. Selisih fold tertinggi dan terendah mencapai 25,72 poin pada CNN baseline, 13,22 poin pada CNN modifikasi, dan 13,03 poin pada RegNet. Variasi ini menandakan performa sensitif terhadap pembagian data. Ukuran Test bervariasi dari 63 sampai 82 gambar per fold.
 
-CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv) dan [CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv). Angka tersebut berhasil direproduksi saat evaluasi ulang seluruh checkpoint dengan selisih maksimum 0.0 terhadap CSV awal. Swin masih menunggu hasil.
+CSV asli: [CNN baseline](results/initial/cnn/metrics_5fold.csv), [CNN modifikasi](results/initial/cnn_modified/metrics_5fold.csv), dan [RegNetY-400MF](results/initial/regnet/metrics_5fold.csv). Angka kedua CNN berhasil direproduksi saat evaluasi ulang seluruh checkpoint, dengan selisih maksimum 0.0 terhadap CSV awal. Hasil RegNetY-400MF berasal dari CSV hasil training dan belum dievaluasi ulang dengan cara yang sama.
 
 ### Hasil rata-rata evaluasi dari kelima fold
 
@@ -179,55 +194,6 @@ Grafik baseline fold 1 menunjukkan indikasi overfitting; checkpoint yang dipakai
 validation loss terendah. CNN modifikasi fold 1 memakai checkpoint epoch 3. Daftar epoch terbaik kedua CNN terdapat di
 [verification.json](results/initial/verification.json).
 
-## Cara menjalankan
-
-1. Clone repositori, buat virtual environment, lalu instal dependensi. Versi yang diuji tercantum pada `requirements.txt` (Python lokal 3.14.4). Untuk GPU, gunakan pasangan torch/torchvision yang sesuai petunjuk resmi PyTorch.
-
-```powershell
-git clone https://github.com/filzahghaniyyah/mpox-skin-lesion-classification.git
-cd mpox-skin-lesion-classification
-python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-2. Unduh dan ekstrak dataset Kaggle secara lokal. `--data-root` menunjuk folder induk berikut, bukan langsung ke `FOLDS`.
-
-```text
-DATA_ROOT/
-├── Original Images/Original Images/FOLDS/
-│   ├── fold1/Train|Valid|Test/<kelas>/
-│   └── ... fold5/
-└── Augmented Images/Augmented Images/FOLDS_AUG/
-    ├── fold1_AUG/Train/<kelas>/
-    └── ... fold5_AUG/
-```
-
-3. Jalankan training lalu testing untuk model yang diperlukan. Ganti path contoh dengan lokasi datasetmu. Semua perintah berjalan dari root repositori. `--device cpu` adalah default; gunakan `--device cuda` jika tersedia.
-
-```powershell
-.\.venv\Scripts\python.exe "Train (CNN).py" --data-root "D:\data\msld"
-.\.venv\Scripts\python.exe "Test (CNN).py" --data-root "D:\data\msld"
-
-.\.venv\Scripts\python.exe "Train (CNN modified).py" --data-root "D:\data\msld"
-.\.venv\Scripts\python.exe "Test (CNN modified).py" --data-root "D:\data\msld"
-
-.\.venv\Scripts\python.exe "Train (Swin).py" --data-root "D:\data\msld" --device cuda
-.\.venv\Scripts\python.exe "Test (Swin).py" --data-root "D:\data\msld" --device cuda
-```
-
-`--epochs`, `--batch-size`, `--learning-rate`, dan `--seed` dapat diatur pada training. `--output-root` mengubah root keluaran. Testing juga menerima `--checkpoint-root` untuk mengevaluasi checkpoint yang sudah ada tanpa memindahkannya. Setiap root tersebut berisi subfolder `model 1 (CNN)`, `model 2 (CNN modified)`, atau `model 3 (Swin)`.
-
-Checkpoint terbaik dan output baru disimpan lokal di `outputs/`. Folder ini diabaikan Git. Hasil training yang sedang berjalan tidak perlu dimulai ulang hanya untuk memakai repositori ini; setelah selesai, jalankan Test dengan checkpoint yang sesuai. Jangan mengubah preprocessing model di tengah satu eksperimen.
-
-4. Setelah hasil lima fold lengkap, salin hanya tabel/grafik untuk dipublikasikan:
-
-```powershell
-.\.venv\Scripts\python.exe scripts/collect_results.py --model swin --run swin_5fold
-.\.venv\Scripts\python.exe scripts/check_repository.py
-```
-
-Untuk hasil di folder lain, tambahkan `--source "path\ke\outputs"`. Script menolak hasil yang belum lengkap dan tidak menyalin dataset atau bobot. Perbarui tabel, jawaban LMS, status Swin, dan konfigurasi di README berdasarkan hasil baru sebelum melakukan commit. Panduan lanjutan: [melengkapi hasil](docs/next_steps.md).
-
 ## Struktur repositori
 
 ```text
@@ -247,7 +213,5 @@ requirements.txt       Versi dependensi yang digunakan saat verifikasi
 - Dokumen tugas W10 Studi Kasus Pembelajaran Mesin dan tujuh pertanyaan LMS menjadi dasar struktur laporan.
 - CNN baseline mengikuti kode materi yang digunakan dalam proyek kelompok. CNN modifikasi diadaptasi dari notebook Rafa lalu disesuaikan menjadi tiga blok sebagaimana source lokal terakhir.
 - [Dataset MSLD v2.0](https://www.kaggle.com/datasets/joydippaul/mpox-skin-lesion-dataset-version-20-msld-v20/data).
-- [Swin Transformer, Liu dkk.](https://arxiv.org/abs/2103.14030) dan [implementasi resmi torchvision](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.swin_t.html).
+- [1] Radosavovic, I., Kosaraju, R. P., Girshick, R., He, K., & Dollár, P. (2020). [Designing Network Design Spaces](https://arxiv.org/abs/2003.13678). CVPR 2020. Implementasi memakai [torchvision `regnet_y_400mf`](https://docs.pytorch.org/vision/stable/models/generated/torchvision.models.regnet_y_400mf.html) dengan bobot `RegNet_Y_400MF_Weights.IMAGENET1K_V2`.
 - [Dokumentasi ROC-AUC scikit-learn](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.roc_auc_score.html).
-
-Ketentuan tugas mengecualikan model yang sudah digunakan dalam kode proyek Kaggle yang dirujuk. Daftar implementasi pembanding Kaggle dan daftar algoritma materi belum diverifikasi lengkap di repositori ini; pemilihan Swin sebagai model ketiga perlu dicocokkan dengan batasan tersebut sebelum pengumpulan final.
