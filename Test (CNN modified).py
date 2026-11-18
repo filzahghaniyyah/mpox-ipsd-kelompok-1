@@ -20,17 +20,10 @@ from sklearn.metrics import (
 )
 
 
-from Utils.runtime import options, select_device
-from Utils.reporting import export_class_details, summarize_classes
-
-
 def main():
-    args = options("cnn_modified")
-    BATCH_SIZE = args.batch_size
-    device = select_device(args.device)
-    root = args.data_root
-    output_dir = args.output_dir
-    checkpoint_dir = args.checkpoint_dir
+    BATCH_SIZE = 32
+    root = Path(__file__).resolve().parent
+    output_dir = root / "outputs" / "model 2 (CNN modified)"
     original_dataset_path = root / "Original Images" / "Original Images" / "FOLDS"
     classes = (
         "Chickenpox", "Cowpox", "HFMD",
@@ -40,17 +33,12 @@ def main():
     fold_confusion_matrices = []
 
     for fold in range(1, 6):
-        checkpoint_path = checkpoint_dir / f"ModifiedCNN_fold{fold}_best.pt"
-        if not checkpoint_path.is_file():
-            raise FileNotFoundError(f"Checkpoint belum tersedia: {checkpoint_path}. Jalankan training dahulu.")
-
-    for fold in range(1, 6):
         test_dataset = getImageLabel(original_dataset_path / f"fold{fold}" / "Test")
         test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False)
 
-        model = ModifiedCNN(output=6, dropout1=0.4, dropout2=0.3).to(device)
+        model = ModifiedCNN(output=6, dropout1=0.4, dropout2=0.3)
         checkpoint = torch.load(
-            checkpoint_dir / f"ModifiedCNN_fold{fold}_best.pt",
+            output_dir / f"ModifiedCNN_fold{fold}_best.pt",
             map_location="cpu",
             weights_only=True,
         )
@@ -58,8 +46,6 @@ def main():
         if checkpoint["fold"] != fold:
             raise ValueError(f"Checkpoint fold {fold} tidak cocok.")
 
-        if tuple(checkpoint["classes"]) != classes:
-            raise ValueError(f"Urutan kelas checkpoint fold {fold} tidak cocok.")
         model.load_state_dict(checkpoint["model_state_dict"])
 
         prediction, ground_truth, probability = [], [], []
@@ -67,13 +53,11 @@ def main():
         with torch.no_grad():
             for src, trg in test_loader:
                 # getData.py sudah menghasilkan [batch, 3, 100, 100].
-                src = src.to(device)
                 pred = model(src)
-                prediction.extend(pred.argmax(dim=1).cpu().numpy())
-                ground_truth.extend(trg.argmax(dim=1).cpu().numpy())
-                probability.extend(torch.softmax(pred, dim=1).cpu().numpy())
+                prediction.extend(pred.argmax(dim=1).numpy())
+                ground_truth.extend(trg.argmax(dim=1).numpy())
+                probability.extend(torch.softmax(pred, dim=1).numpy())
 
-        export_class_details(output_dir, fold, classes, ground_truth, prediction)
         cf_matrix = confusion_matrix(
             ground_truth, prediction, labels=range(len(classes))
         )
@@ -138,14 +122,10 @@ def main():
         })
 
     results = pd.DataFrame(fold_metrics).set_index("fold")
-    mean_metrics = results.mean(axis=0)
-    std_metrics = results.std(axis=0, ddof=1)
-    results.loc["mean"] = mean_metrics
-    results.loc["std"] = std_metrics
+    results.loc["mean"] = results.mean(axis=0)
     print("\nHasil model 2 dan rerata 5-fold:")
     print(results.round(4).to_string())
     results.to_csv(output_dir / "metrics_5fold.csv")
-    summarize_classes(output_dir, classes)
 
     mean_cf = np.mean(fold_confusion_matrices, axis=0)
     plt.figure(figsize=(12, 7))
@@ -166,4 +146,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
