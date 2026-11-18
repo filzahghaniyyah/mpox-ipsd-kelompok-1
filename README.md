@@ -137,7 +137,7 @@ Ketiga CSV mencatat hasil evaluasi Original Test. Skrip `Test (RegNet).py` menul
 
 Nilai ditampilkan sebagai **rata-rata ± simpangan baku sampel** (`ddof=1`) dari lima fold. Setiap fold mendapat bobot yang sama. Berdasarkan angka CSV sebelum pembulatan, RegNet mengungguli CNN modifikasi sebesar **23,87 poin persentase** pada akurasi dan **27,85 poin persentase** pada F1 weighted. CNN modifikasi mengungguli CNN baseline sebesar 2,60 poin pada akurasi dan 4,06 poin pada F1 weighted.
 
-![Rata-rata dan simpangan baku lima fold untuk CNN baseline, CNN modifikasi, dan RegNetY-400MF](results/model_comparison.png)
+![Rata-rata dan simpangan baku lima fold untuk CNN baseline, CNN modifikasi, dan RegNetY-400MF](results/preview.webp)
 
 ### Kelebihan dan keterbatasan model yang dikembangkan
 
