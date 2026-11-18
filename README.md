@@ -1,4 +1,4 @@
-# Klasifikasi Citra Lesi Kulit dengan CNN dan Swin Transformer
+# Klasifikasi Citra Lesi Kulit dengan CNN dan RegNet
 
 ## Ringkasan
 Studi kasus mata kuliah **Infrastruktur dan Platform untuk Sains Data** menggunakan Mpox Skin Lesion Dataset v2.0 (MSLD v2.0). Proyek ini membandingkan CNN baseline dari materi, CNN dengan arsitektur yang dimodifikasi, dan Swin-Tiny untuk mengklasifikasikan enam kelas citra kulit.
